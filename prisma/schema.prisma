@@ -1,0 +1,197 @@
+// Invoicely — Romanian invoicing SaaS
+// Run: npx prisma migrate dev --name init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts  Account[]
+  sessions  Session[]
+  companies Company[]
+  clients   Client[]
+  invoices  Invoice[]
+  templates InvoiceTemplate[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// Supported invoice currencies
+// RON = no exchange rate needed; others = BNR rate fetched + RON column shown
+
+// Supplier company (the user's own company)
+model Company {
+  id        String   @id @default(cuid())
+  userId    String
+  cui       String   @unique
+  name      String
+  address   String?
+  vatPayer  Boolean   @default(false)
+  vatRate   Decimal?  @db.Decimal(5, 2) // e.g. 19.00 for 19% TVA; null = no VAT
+  phone     String?
+  email     String?
+  bank      String?
+  iban      String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@map("companies")
+}
+
+// Client (buyer) — cached from ANAF + manual overrides
+model Client {
+  id        String   @id @default(cuid())
+  userId    String
+  cui       String?
+  name      String
+  address   String?
+  vatPayer  Boolean  @default(false)
+  currency  String   @default("RON") // preferred invoice currency for this client
+  phone     String?
+  email     String?
+  anafData  Json?    // raw ANAF response stored for audit
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@index([cui])
+  @@map("clients")
+}
+
+// ANAF CUI lookup cache (shared, no userId — reduces API calls)
+model AnafCache {
+  cui       String   @id
+  data      Json     // full parsed ANAF response
+  fetchedAt DateTime @default(now())
+
+  @@map("anaf_cache")
+}
+
+// Invoice template — JSON-driven column/footer config
+model InvoiceTemplate {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  isDefault Boolean  @default(false)
+  config    Json     // TemplateConfig shape (see src/types/invoice.ts)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@map("invoice_templates")
+}
+
+model Invoice {
+  id           String        @id @default(cuid())
+  number       String        @unique // e.g. "INV-2024-001"
+  userId       String
+  companyId    String?
+  clientId     String
+  templateId   String?
+  status       InvoiceStatus @default(DRAFT)
+  currency     String        @default("RON") // locked at creation from client preference
+  issueDate    DateTime      @default(now())
+  dueDate      DateTime?
+  shipDate     DateTime?
+  exchangeRate Decimal       @db.Decimal(10, 4) // EUR→RON rate locked at creation
+  totalEur     Decimal       @db.Decimal(12, 2)
+  totalRon     Decimal       @db.Decimal(12, 2)
+  notes        String?
+  footerText   String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company  Company?         @relation(fields: [companyId], references: [id])
+  client   Client           @relation(fields: [clientId], references: [id])
+  template InvoiceTemplate? @relation(fields: [templateId], references: [id])
+  items    InvoiceItem[]
+
+  @@index([userId, status])
+  @@index([clientId])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  position    Int     // display order
+  name        String
+  unit        String  @default("buc")
+  quantity    Decimal @db.Decimal(10, 3)
+  priceEur    Decimal @db.Decimal(10, 2)
+  subtotalEur Decimal @db.Decimal(12, 2)
+  subtotalRon Decimal @db.Decimal(12, 2)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  CANCELLED
+}

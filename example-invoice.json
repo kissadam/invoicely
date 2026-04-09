@@ -1,0 +1,54 @@
+{
+  "_comment": "Example invoice payload — POST /api/invoices",
+  "clientId": "clnt_abc123",
+  "companyId": "comp_xyz456",
+  "issueDate": "2024-03-15",
+  "dueDate": "2024-04-15",
+  "shipDate": "2024-03-15",
+  "exchangeRate": 5.094,
+  "notes": "Plată prin transfer bancar",
+  "footerText": "Factura circulă fără semnătura și ștampila conform Lg. 227/2015-Codul fiscal art 319(aliniat 29).",
+  "items": [
+    {
+      "position": 1,
+      "name": "Servicii design web",
+      "unit": "buc",
+      "quantity": 1,
+      "priceEur": 400,
+      "subtotalEur": 400,
+      "subtotalRon": 2037.6
+    },
+    {
+      "position": 2,
+      "name": "Incarcare produse simple",
+      "unit": "buc",
+      "quantity": 16,
+      "priceEur": 5,
+      "subtotalEur": 80,
+      "subtotalRon": 407.52
+    },
+    {
+      "position": 3,
+      "name": "Incarcare produse variabile complexe",
+      "unit": "buc",
+      "quantity": 2,
+      "priceEur": 20,
+      "subtotalEur": 40,
+      "subtotalRon": 203.76
+    },
+    {
+      "position": 4,
+      "name": "Servicii fotografice",
+      "unit": "buc",
+      "quantity": 3,
+      "priceEur": 4,
+      "subtotalEur": 12,
+      "subtotalRon": 61.13
+    }
+  ],
+  "_computed_totals": {
+    "totalEur": 532,
+    "totalRon": 2710.01,
+    "exchangeRateLine": "Curs EUR din ziua precedentă facturării (14.03.2024): 1 EUR = 5.0940 RON"
+  }
+}
