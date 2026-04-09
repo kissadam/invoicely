@@ -10,7 +10,14 @@ interface Entry {
   resetAt: number;
 }
 
-const store = new Map<string, Entry>();
+// Use globalThis to persist across hot reloads in dev
+const store: Map<string, Entry> =
+  (globalThis as unknown as Record<string, unknown>).__rl_store as Map<string, Entry> ??
+  (() => {
+    const m = new Map<string, Entry>();
+    (globalThis as unknown as Record<string, unknown>).__rl_store = m;
+    return m;
+  })();
 
 const MAX_REQUESTS = 5;
 const WINDOW_MS = 10 * 60 * 1000; // 10 minutes
