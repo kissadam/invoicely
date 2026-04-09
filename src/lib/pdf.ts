@@ -149,12 +149,24 @@ export function buildInvoiceHtml(invoice: FullInvoice): string {
 }
 
 export async function generateInvoicePdf(invoice: FullInvoice): Promise<Buffer> {
-  // Dynamic import — puppeteer is heavy, only load when needed
-  const puppeteer = await import("puppeteer");
-  const browser = await puppeteer.default.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  const isVercel = !!process.env.VERCEL;
+
+  let browser;
+  if (isVercel) {
+    const chromium = await import("@sparticuz/chromium");
+    const puppeteerCore = await import("puppeteer-core");
+    browser = await puppeteerCore.default.launch({
+      args: chromium.default.args,
+      executablePath: await chromium.default.executablePath(),
+      headless: true,
+    });
+  } else {
+    const puppeteer = await import("puppeteer");
+    browser = await puppeteer.default.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+  }
 
   try {
     const page = await browser.newPage();
