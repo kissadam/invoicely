@@ -9,6 +9,7 @@ function LoginForm() {
   const params = useSearchParams();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const isVerify = params.get("verify") === "1";
   const isError  = params.get("error")  === "1";
@@ -17,8 +18,14 @@ function LoginForm() {
     e.preventDefault();
     if (!email.trim()) return;
     setLoading(true);
-    await signIn("email", { email: email.trim(), callbackUrl: "/" });
+    setErrorMsg("");
+    const result = await signIn("email", { email: email.trim(), callbackUrl: "/", redirect: false });
     setLoading(false);
+    if (result?.error) {
+      setErrorMsg(result.error);
+    } else {
+      window.location.href = "/login?verify=1";
+    }
   }
 
   if (isVerify) {
@@ -46,10 +53,10 @@ function LoginForm() {
         <p className="text-sm text-slate-500 mt-1">Autentifică-te cu emailul tău</p>
       </div>
 
-      {isError && (
+      {(isError || errorMsg) && (
         <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-5 text-sm text-red-700">
           <AlertCircle size={15} />
-          Link invalid sau expirat. Încearcă din nou.
+          {errorMsg || "Link invalid sau expirat. Încearcă din nou."}
         </div>
       )}
 
