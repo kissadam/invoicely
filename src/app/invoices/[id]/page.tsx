@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 /**
  * Invoice detail page — view, change status, download PDF, duplicate
  */

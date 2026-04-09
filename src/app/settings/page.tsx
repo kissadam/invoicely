@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 export default function SettingsPage() {
   return (
     <div className="p-8 max-w-2xl mx-auto">

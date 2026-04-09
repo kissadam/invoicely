@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 /**
  * Dashboard — shows key metrics and recent invoices
  */
