@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/company/:cui
  * Returns company data from DB cache or ANAF API.

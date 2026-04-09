@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 /**
  * GET  /api/clients  — list clients
  * POST /api/clients  — create client
