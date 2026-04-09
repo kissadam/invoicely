@@ -153,12 +153,10 @@ export async function generateInvoicePdf(invoice: FullInvoice): Promise<Buffer> 
 
   let browser;
   if (isVercel) {
-    // Dynamic import with `as string` bypasses TypeScript's static module resolution
-    // so builds succeed even when the type declarations aren't available at compile time.
-    type ChromiumType = typeof import("@sparticuz/chromium");
-    type PuppeteerCoreType = typeof import("puppeteer-core");
-    const chromium = (await import("@sparticuz/chromium" as string)) as unknown as ChromiumType;
-    const puppeteerCore = (await import("puppeteer-core" as string)) as unknown as PuppeteerCoreType;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chromium = (await import("@sparticuz/chromium" as string)) as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const puppeteerCore = (await import("puppeteer-core" as string)) as any;
     browser = await puppeteerCore.default.launch({
       args: chromium.default.args,
       executablePath: await chromium.default.executablePath(),
