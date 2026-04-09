@@ -14,6 +14,7 @@ export function getAuthOptions(): NextAuthOptions {
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   return {
+    secret: process.env.NEXTAUTH_SECRET,
     adapter: PrismaAdapter(prisma),
     providers: [
       EmailProvider({
