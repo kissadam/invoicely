@@ -370,7 +370,7 @@ export default function InvoiceEditor() {
 
             <div
               className="grid gap-2 px-4 py-2 bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-100"
-              style={{ gridTemplateColumns: ["40px", "1fr", "80px", "90px", "110px", "110px", ...(needsRate ? ["110px"] : []), ...(vatEnabled ? ["90px", "110px"] : []), "40px"].join(" ") }}
+              style={{ gridTemplateColumns: ["28px", "minmax(160px,2fr)", "50px", "60px", "100px", "100px", ...(needsRate ? ["100px"] : []), ...(vatEnabled ? ["80px", "100px"] : []), "28px"].join(" ") }}
             >
               <span className="text-center">Nr.</span>
               <span>Denumire serviciu</span>
@@ -406,10 +406,12 @@ export default function InvoiceEditor() {
                     <span className="font-medium">{totals.totalEur.toFixed(2)} {currency}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-slate-700">
-                  <span>Total fără TVA</span>
-                  <span className="font-medium">{displayTotal.toFixed(2)} RON</span>
-                </div>
+                {vatEnabled && (
+                  <div className="flex justify-between text-slate-700">
+                    <span>Total fără TVA</span>
+                    <span className="font-medium">{displayTotal.toFixed(2)} RON</span>
+                  </div>
+                )}
 
                 {vatEnabled && (
                   <div className="flex justify-between pt-2 border-t border-slate-200 mt-2 text-slate-600">
@@ -419,7 +421,7 @@ export default function InvoiceEditor() {
                 )}
 
                 <div className="flex justify-between font-bold text-slate-900 text-base border-t border-slate-300 pt-2 mt-1">
-                  <span>Total de plată</span>
+                  <span>{vatEnabled ? "Total de plată (TVA inclus)" : "Total de plată"}</span>
                   <span>{(vatEnabled ? totals.totalWithVatRon : displayTotal).toFixed(2)} RON</span>
                 </div>
               </div>

@@ -35,21 +35,27 @@ export default function LineItemRow({ item, exchangeRate, currency, vatEnabled =
   const totalWithVat = baseRon + vatAmount;
 
   const gridTemplateColumns = [
-    "40px", "1fr", "80px", "90px", "110px", "110px",
-    ...(needsRate ? ["110px"] : []),
-    ...(vatEnabled ? ["90px", "110px"] : []),
-    "40px",
+    "28px", "minmax(160px,2fr)", "50px", "60px", "100px", "100px",
+    ...(needsRate ? ["100px"] : []),
+    ...(vatEnabled ? ["80px", "100px"] : []),
+    "32px",
   ].join(" ");
 
   return (
-    <div className="grid gap-2 px-4 py-2.5 border-b border-slate-50 items-center hover:bg-slate-50/50 transition-colors" style={{ gridTemplateColumns }}>
+    <div className="grid gap-2 px-4 py-2.5 border-b border-slate-50 items-start hover:bg-slate-50/50 transition-colors" style={{ gridTemplateColumns }}>
       <span className="text-center text-xs text-slate-400 font-medium">{item.position}</span>
 
-      <input
+      <textarea
         value={item.name}
         onChange={(e) => set("name", e.target.value)}
         placeholder="Denumire serviciu..."
-        className={cell}
+        rows={1}
+        className={cell + " resize-none overflow-hidden leading-snug"}
+        onInput={(e) => {
+          const el = e.currentTarget;
+          el.style.height = "auto";
+          el.style.height = el.scrollHeight + "px";
+        }}
       />
 
       <input

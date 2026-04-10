@@ -197,7 +197,7 @@ export default function InvoicePreview({
               </>
             )}
             <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0 0", fontSize: 15, fontWeight: 700, color: "#0f172a" }}>
-              <span>{vatEnabled ? "Total cu TVA" : "Total de plată (TVA inclus)"}</span>
+              <span>{vatEnabled ? "Total de plată (TVA inclus)" : "Total de plată"}</span>
               <span>{formatCurrency(vatEnabled ? totals.totalWithVatRon : (needsRate ? totals.totalRon : totals.totalEur), "RON")}</span>
             </div>
           </div>

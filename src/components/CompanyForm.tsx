@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Company } from "@prisma/client";
 
@@ -9,20 +9,26 @@ interface Props {
   existing: Company | null;
 }
 
+const EMPTY = {
+  cui: "", name: "", address: "", bank: "", iban: "",
+  phone: "", email: "", vatPayer: false, vatRate: "",
+};
+
 export default function CompanyForm({ existing }: Props) {
   const [savedId, setSavedId] = useState<string | null>(existing?.id ?? null);
   const [form, setForm] = useState({
-    cui:      existing?.cui                              ?? "",
-    name:     existing?.name                             ?? "",
-    address:  existing?.address                          ?? "",
-    bank:     existing?.bank                             ?? "",
-    iban:     existing?.iban                             ?? "",
-    phone:    existing?.phone                            ?? "",
-    email:    existing?.email                            ?? "",
-    vatPayer: existing?.vatPayer                         ?? false,
+    cui:      existing?.cui      ?? "",
+    name:     existing?.name     ?? "",
+    address:  existing?.address  ?? "",
+    bank:     existing?.bank     ?? "",
+    iban:     existing?.iban     ?? "",
+    phone:    existing?.phone    ?? "",
+    email:    existing?.email    ?? "",
+    vatPayer: existing?.vatPayer ?? false,
     vatRate:  existing?.vatRate != null ? String(existing.vatRate) : "",
   });
-  const [saving, setSaving] = useState(false);
+  const [saving,   setSaving]   = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [cuiLoading, setCuiLoading] = useState(false);
 
   function set(key: keyof typeof form, val: string | boolean) {
@@ -30,17 +36,17 @@ export default function CompanyForm({ existing }: Props) {
   }
 
   async function lookupCui() {
-    const cui = form.cui.replace(/\D/g, "");
+    const cui = form.cui.trim().replace(/\D/g, "");
     if (!cui) return;
     setCuiLoading(true);
     try {
       const res = await fetch(`/api/anaf?cui=${cui}`);
-      if (!res.ok) throw new Error("Nu s-au găsit date pentru acest CUI");
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Nu s-au găsit date pentru acest CUI");
       setForm((f) => ({
         ...f,
-        name:     data.name    ?? f.name,
-        address:  data.address ?? f.address,
+        name:     data.name     ?? f.name,
+        address:  data.address  ?? f.address,
         vatPayer: data.vatPayer ?? f.vatPayer,
       }));
       toast.success("Date preluate din ANAF");
@@ -60,20 +66,40 @@ export default function CompanyForm({ existing }: Props) {
     setSaving(true);
     try {
       const method = savedId ? "PATCH" : "POST";
-      const url = savedId ? `/api/companies/${savedId}` : "/api/companies";
+      const url    = savedId ? `/api/companies/${savedId}` : "/api/companies";
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(trimmed),
       });
-      if (!res.ok) throw new Error("Eroare la salvare");
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Eroare la salvare");
       if (!savedId) setSavedId(data.id);
       toast.success("Compania a fost salvată");
-    } catch {
-      toast.error("Eroare la salvare");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Eroare la salvare");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function deleteCompany() {
+    if (!savedId) { setForm(EMPTY); return; }
+    if (!confirm("Ștergi compania? Facturile existente nu vor fi afectate.")) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/companies/${savedId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Eroare la ștergere");
+      }
+      setSavedId(null);
+      setForm(EMPTY);
+      toast.success("Compania a fost ștearsă");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Eroare la ștergere");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -141,19 +167,25 @@ export default function CompanyForm({ existing }: Props) {
         {form.vatPayer && (
           <Field label="Cotă TVA (%)">
             <input
-              type="number"
-              min={0}
-              max={100}
-              step={1}
+              type="number" min={0} max={100} step={1}
               value={form.vatRate}
               onChange={(e) => set("vatRate", e.target.value)}
-              className={input}
-              placeholder="21"
+              className={input} placeholder="21"
             />
           </Field>
         )}
       </div>
-      <div className="flex justify-end pt-2">
+
+      <div className="flex items-center justify-between pt-2">
+        <button
+          type="button"
+          onClick={deleteCompany}
+          disabled={deleting}
+          className="flex items-center gap-1.5 px-3 py-2 text-sm text-red-500 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-lg disabled:opacity-50 transition-colors"
+        >
+          {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+          {savedId ? "Șterge compania" : "Resetează"}
+        </button>
         <button
           onClick={save}
           disabled={saving}
