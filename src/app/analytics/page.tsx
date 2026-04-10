@@ -161,6 +161,69 @@ export default async function AnalyticsPage() {
     else                 aging.d90plus += amt;
   }
 
+  // ── Forecast ─────────────────────────────────────────────────────────────
+
+  // Pipeline: open (SENT, not yet overdue) invoices expected to come in
+  const pipeline = invoices.filter((i) => i.status === "SENT" && (!i.dueDate || new Date(i.dueDate) >= now));
+  const pipelineTotal = pipeline.reduce((s, i) => s + effectiveTotal(i), 0);
+
+  // 3-month average revenue (last 3 completed months)
+  const last3Keys = months12.slice(-4, -1); // exclude current month
+  const last3Avg = last3Keys.length > 0
+    ? last3Keys.reduce((s, mk) => s + (revenueByMonth[mk] ?? 0), 0) / last3Keys.length
+    : 0;
+
+  // Projected total for current month = already collected + pipeline capped at avg
+  const projectedThisMonth = Math.round(collectedThisMonth + Math.min(pipelineTotal, last3Avg * 1.5));
+
+  // ── AI Insights ───────────────────────────────────────────────────────────
+
+  type Insight = { icon: string; text: string; color: "green" | "red" | "amber" | "blue" | "slate" };
+  const insights: Insight[] = [];
+
+  // MoM revenue
+  if (collectedLastMonth > 0) {
+    if (collectedMoM >= 10) {
+      insights.push({ icon: "🚀", text: `Venituri cu ${collectedMoM.toFixed(0)}% mai mari față de luna trecută`, color: "green" });
+    } else if (collectedMoM <= -10) {
+      insights.push({ icon: "📉", text: `Venituri cu ${Math.abs(collectedMoM).toFixed(0)}% mai mici față de luna trecută`, color: "red" });
+    } else {
+      insights.push({ icon: "📊", text: `Venituri stabile față de luna trecută (${collectedMoM > 0 ? "+" : ""}${collectedMoM.toFixed(0)}%)`, color: "slate" });
+    }
+  }
+
+  // Overdue alert
+  if (overdue.length > 0) {
+    insights.push({ icon: "⚠️", text: `${overdue.length} ${overdue.length === 1 ? "factură restantă" : "facturi restante"} în valoare de ${formatCurrency(totalOverdue, "RON")}`, color: "red" });
+  } else if (billed.length > 0) {
+    insights.push({ icon: "✅", text: "Toate facturile sunt încasate la termen", color: "green" });
+  }
+
+  // Top client
+  if (topClients.length > 0) {
+    const top = topClients[0];
+    const pct = totalBilled > 0 ? (top.total / totalBilled) * 100 : 0;
+    if (pct >= 50) {
+      insights.push({ icon: "🎯", text: `${top.name} reprezintă ${pct.toFixed(0)}% din venituri — risc de concentrare`, color: "amber" });
+    } else {
+      insights.push({ icon: "🏆", text: `Cel mai valoros client: ${top.name} (${formatCurrency(top.total, "RON")})`, color: "blue" });
+    }
+  }
+
+  // DSO insight
+  if (dso !== null) {
+    if (dso <= 14) {
+      insights.push({ icon: "⚡", text: `Timp mediu de încasare excelent: ${dso} zile`, color: "green" });
+    } else if (dso >= 45) {
+      insights.push({ icon: "🐢", text: `Timp mediu de încasare ridicat: ${dso} zile — urmăriți clienții`, color: "amber" });
+    }
+  }
+
+  // Pipeline
+  if (pipelineTotal > 0) {
+    insights.push({ icon: "💰", text: `${pipeline.length} ${pipeline.length === 1 ? "factură" : "facturi"} în așteptare: ${formatCurrency(pipelineTotal, "RON")} de încasat`, color: "blue" });
+  }
+
   const trend = trendIcon(collectedMoM);
   const TrendIcon = trend.icon;
 
@@ -205,6 +268,48 @@ export default async function AnalyticsPage() {
           accent="amber"
         />
       </div>
+
+      {/* ── AI Insights ── */}
+      {insights.length > 0 && (
+        <div className="grid grid-cols-1 gap-2">
+          {insights.map((ins, i) => {
+            const colorMap = {
+              green: "bg-green-50 border-green-100 text-green-800",
+              red:   "bg-red-50 border-red-100 text-red-800",
+              amber: "bg-amber-50 border-amber-100 text-amber-800",
+              blue:  "bg-blue-50 border-blue-100 text-blue-800",
+              slate: "bg-slate-50 border-slate-100 text-slate-700",
+            };
+            return (
+              <div key={i} className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-medium ${colorMap[ins.color]}`}>
+                <span className="text-base leading-none">{ins.icon}</span>
+                {ins.text}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Forecast ── */}
+      {(pipelineTotal > 0 || last3Avg > 0) && (
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Medie lunară (3 luni)</p>
+            <p className="text-2xl font-bold text-slate-900 tabular-nums">{formatCurrency(Math.round(last3Avg), "RON")}</p>
+            <p className="text-xs text-slate-400 mt-1">bază de referință</p>
+          </div>
+          <div className="bg-white rounded-xl border border-blue-100 p-5">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Pipeline activ</p>
+            <p className="text-2xl font-bold text-blue-700 tabular-nums">{formatCurrency(Math.round(pipelineTotal), "RON")}</p>
+            <p className="text-xs text-slate-400 mt-1">{pipeline.length} {pipeline.length === 1 ? "factură" : "facturi"} neîncasate</p>
+          </div>
+          <div className="bg-white rounded-xl border border-violet-100 p-5">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Proiecție luna curentă</p>
+            <p className="text-2xl font-bold text-violet-700 tabular-nums">{formatCurrency(projectedThisMonth, "RON")}</p>
+            <p className="text-xs text-slate-400 mt-1">{formatCurrency(Math.round(collectedThisMonth), "RON")} încasat + pipeline</p>
+          </div>
+        </div>
+      )}
 
       {/* ── Revenue chart + Funnel ── */}
       <div className="grid grid-cols-3 gap-6">
