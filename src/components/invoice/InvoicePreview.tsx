@@ -99,36 +99,55 @@ export default function InvoicePreview({
         </div>
 
         {/* ── SERVICII TABLE ── */}
-        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
-          <thead>
-            <tr style={{ background: accent, color: "#fff", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              {[
-                "Nr.", "Denumirea serviciilor", "U.M.", "Cantitate",
-                `Preț unitar ${currency}`, `Subtotal ${currency}`,
-                ...(needsRate ? ["Subtotal RON"] : []),
-              ].map((h, i) => (
-                <th key={i} style={{ padding: "9px 10px", textAlign: i === 0 || i === 2 ? "center" : i >= 3 ? "right" : "left", fontWeight: 600 }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {validItems.length === 0 ? (
-              <tr>
-                <td colSpan={needsRate ? 7 : 6} style={{ padding: "18px", textAlign: "center", color: "#94a3b8", fontSize: 12 }}>Niciun articol adăugat</td>
-              </tr>
-            ) : validItems.map((item) => (
-              <tr key={item.position} style={{ borderBottom: "1px solid #f1f5f9", background: item.position % 2 === 0 ? "#f8fafc" : "#fff" }}>
-                <td style={{ padding: "7px 10px", textAlign: "center", fontSize: 12 }}>{item.position}</td>
-                <td style={{ padding: "7px 10px", fontSize: 12 }}>{item.name}</td>
-                <td style={{ padding: "7px 10px", textAlign: "center", fontSize: 12 }}>{item.unit}</td>
-                <td style={{ padding: "7px 10px", textAlign: "right", fontSize: 12 }}>{item.quantity}</td>
-                <td style={{ padding: "7px 10px", textAlign: "right", fontSize: 12 }}>{item.priceEur.toFixed(2)}</td>
-                <td style={{ padding: "7px 10px", textAlign: "right", fontSize: 12 }}>{item.subtotalEur.toFixed(2)}</td>
-                {needsRate && <td style={{ padding: "7px 10px", textAlign: "right", fontSize: 12, fontWeight: 600 }}>{item.subtotalRon.toFixed(2)}</td>}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {(() => {
+          const vatRate = totals.vatRate || 21;
+          const headers = [
+            { label: "Nr.",                          align: "center" },
+            { label: "Denumirea serviciilor",         align: "left"   },
+            { label: "U.M.",                          align: "center" },
+            { label: "Cantitate",                     align: "right"  },
+            { label: `Preț unitar ${currency}`,       align: "right"  },
+            { label: `Subtotal ${currency}`,          align: "right"  },
+            ...(needsRate  ? [{ label: "Subtotal RON",              align: "right" }] : []),
+            ...(vatEnabled ? [{ label: `TVA ${vatRate}%`,           align: "right" }] : []),
+            ...(vatEnabled ? [{ label: "Total TVA inclus",          align: "right" }] : []),
+          ];
+          return (
+            <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
+              <thead>
+                <tr style={{ background: accent, color: "#fff", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  {headers.map((h, i) => (
+                    <th key={i} style={{ padding: "9px 10px", textAlign: h.align as "left" | "right" | "center", fontWeight: 600 }}>{h.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {validItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={headers.length} style={{ padding: "18px", textAlign: "center", color: "#94a3b8", fontSize: 12 }}>Niciun articol adăugat</td>
+                  </tr>
+                ) : validItems.map((item) => {
+                  const baseRon = needsRate ? item.subtotalRon : item.subtotalEur;
+                  const vatAmount = vatEnabled ? Math.round(baseRon * vatRate) / 100 : 0;
+                  const totalWithVat = baseRon + vatAmount;
+                  return (
+                    <tr key={item.position} style={{ borderBottom: "1px solid #f1f5f9", background: item.position % 2 === 0 ? "#f8fafc" : "#fff" }}>
+                      <td style={{ padding: "7px 10px", textAlign: "center", fontSize: 12 }}>{item.position}</td>
+                      <td style={{ padding: "7px 10px", fontSize: 12 }}>{item.name}</td>
+                      <td style={{ padding: "7px 10px", textAlign: "center", fontSize: 12 }}>{item.unit}</td>
+                      <td style={{ padding: "7px 10px", textAlign: "right", fontSize: 12 }}>{item.quantity}</td>
+                      <td style={{ padding: "7px 10px", textAlign: "right", fontSize: 12 }}>{item.priceEur.toFixed(2)}</td>
+                      <td style={{ padding: "7px 10px", textAlign: "right", fontSize: 12 }}>{item.subtotalEur.toFixed(2)}</td>
+                      {needsRate  && <td style={{ padding: "7px 10px", textAlign: "right", fontSize: 12, fontWeight: 600 }}>{item.subtotalRon.toFixed(2)}</td>}
+                      {vatEnabled && <td style={{ padding: "7px 10px", textAlign: "right", fontSize: 12, color: "#d97706" }}>{vatAmount.toFixed(2)}</td>}
+                      {vatEnabled && <td style={{ padding: "7px 10px", textAlign: "right", fontSize: 12, fontWeight: 700 }}>{totalWithVat.toFixed(2)}</td>}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          );
+        })()}
 
         {/* ── BNR CURS ── */}
         {exchangeLine && (
