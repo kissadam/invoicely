@@ -368,23 +368,21 @@ export default function InvoiceEditor() {
               </div>
             </div>
 
-            {(() => {
-              const cols = ["40px", "1fr", "80px", "90px", "110px", "110px", ...(needsRate ? ["110px"] : []), ...(vatEnabled ? ["90px", "110px"] : []), "40px"].join("_");
-              return (
-                <div className={`grid grid-cols-[${cols}] gap-2 px-4 py-2 bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-100`}>
-                  <span className="text-center">Nr.</span>
-                  <span>Denumire serviciu</span>
-                  <span className="text-center">U.M.</span>
-                  <span className="text-right">Cantitate</span>
-                  <span className="text-right">Preț {currency}</span>
-                  <span className="text-right">Subtotal {currency}</span>
-                  {needsRate && <span className="text-right">Subtotal RON</span>}
-                  {vatEnabled && <span className="text-right">TVA {vatRate}%</span>}
-                  {vatEnabled && <span className="text-right">Total+TVA</span>}
-                  <span />
-                </div>
-              );
-            })()}
+            <div
+              className="grid gap-2 px-4 py-2 bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-100"
+              style={{ gridTemplateColumns: ["40px", "1fr", "80px", "90px", "110px", "110px", ...(needsRate ? ["110px"] : []), ...(vatEnabled ? ["90px", "110px"] : []), "40px"].join(" ") }}
+            >
+              <span className="text-center">Nr.</span>
+              <span>Denumire serviciu</span>
+              <span className="text-center">U.M.</span>
+              <span className="text-right">Cantitate</span>
+              <span className="text-right">Preț {currency}</span>
+              <span className="text-right">Subtotal {currency}</span>
+              {needsRate && <span className="text-right">Subtotal RON</span>}
+              {vatEnabled && <span className="text-right">TVA {vatRate}%</span>}
+              {vatEnabled && <span className="text-right">Total+TVA</span>}
+              <span />
+            </div>
 
             {items.map((item, idx) => (
               <LineItemRow

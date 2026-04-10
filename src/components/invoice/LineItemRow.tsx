@@ -34,17 +34,15 @@ export default function LineItemRow({ item, exchangeRate, currency, vatEnabled =
   const vatAmount = vatEnabled ? Math.round(baseRon * vatRate) / 100 : 0;
   const totalWithVat = baseRon + vatAmount;
 
-  // Build grid: pos | name | unit | qty | price | subtotal | [subtotalRON] | [VAT] | [total+VAT] | del
-  const cols = [
+  const gridTemplateColumns = [
     "40px", "1fr", "80px", "90px", "110px", "110px",
     ...(needsRate ? ["110px"] : []),
     ...(vatEnabled ? ["90px", "110px"] : []),
     "40px",
-  ].join("_");
-  const gridCols = `grid-cols-[${cols}]`;
+  ].join(" ");
 
   return (
-    <div className={`grid ${gridCols} gap-2 px-4 py-2.5 border-b border-slate-50 dark:border-slate-700 items-center hover:bg-slate-50/50 transition-colors`}>
+    <div className="grid gap-2 px-4 py-2.5 border-b border-slate-50 items-center hover:bg-slate-50/50 transition-colors" style={{ gridTemplateColumns }}>
       <span className="text-center text-xs text-slate-400 font-medium">{item.position}</span>
 
       <input
