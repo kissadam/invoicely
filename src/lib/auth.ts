@@ -31,12 +31,9 @@ export function getAuthOptions(): NextAuthOptions {
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
                 <h2 style="color: #1e293b; margin-bottom: 8px;">Bun venit la Invoicely</h2>
-                <p style="color: #475569; margin-bottom: 24px;">Apasă butonul de mai jos pentru a te autentifica. Link-ul expiră în 24 de ore.</p>
-                <a href="${url}"
-                  style="display:inline-block;background:#2563eb;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
-                  Autentifică-te
-                </a>
-                <p style="color:#94a3b8;font-size:12px;margin-top:24px;">
+                <p style="color: #475569; margin-bottom: 16px;">Copiază și deschide link-ul de mai jos în browser pentru a te autentifica. Link-ul expiră în 24 de ore.</p>
+                <p style="word-break:break-all;background:#f1f5f9;padding:14px;border-radius:8px;font-size:13px;color:#2563eb;margin-bottom:16px">${url}</p>
+                <p style="color:#94a3b8;font-size:12px;">
                   Dacă nu ai solicitat acest email, îl poți ignora în siguranță.
                 </p>
               </div>
