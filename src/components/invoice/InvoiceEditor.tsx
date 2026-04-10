@@ -3,13 +3,14 @@
 /**
  * Main invoice creation / editing form.
  * Handles: currency selector, BNR rate fetch, VAT, line items, live totals.
+ * Pass invoiceId + initialData to enter edit mode (PATCH on save).
  */
 
 import { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, RefreshCw, FileDown, Loader2, AlertTriangle } from "lucide-react";
+import { Plus, RefreshCw, FileDown, Loader2, AlertTriangle, Pencil } from "lucide-react";
 import { computeInvoice } from "@/lib/calculations";
 import { formatExchangeRateLine } from "@/lib/bnr";
 import type { InvoiceItemForm } from "@/types/invoice";
@@ -45,8 +46,29 @@ type Company = {
   vatRate?: number | null;
 };
 
-export default function InvoiceEditor() {
+export interface EditableInvoice {
+  number: string;
+  currency: string;
+  issueDate: string;  // "YYYY-MM-DD"
+  dueDate: string;
+  shipDate: string;
+  notes: string;
+  footerText: string;
+  exchangeRate: number;
+  status: string;
+  client: SelectedClient;
+  items: InvoiceItemForm[];
+}
+
+export default function InvoiceEditor({
+  invoiceId,
+  initialData,
+}: {
+  invoiceId?: string;
+  initialData?: EditableInvoice;
+}) {
   const router = useRouter();
+  const isEdit = !!invoiceId;
   const [tab, setTab] = useState<"form" | "preview">("form");
 
   // Supplier company
@@ -59,14 +81,15 @@ export default function InvoiceEditor() {
   }, []);
 
   // Client
-  const [client, setClient] = useState<SelectedClient | null>(null);
+  const [client, setClient] = useState<SelectedClient | null>(initialData?.client ?? null);
 
   // VAT — driven by MY company being a VAT payer, always 21%
   const vatEnabled = !!company?.vatPayer;
   const vatRate = 21;
 
-  // Currency — selected on the invoice, persisted in localStorage
+  // Currency
   const [currency, setCurrency] = useState(() => {
+    if (initialData?.currency) return initialData.currency;
     if (typeof window !== "undefined") return localStorage.getItem("invoice_currency") ?? "RON";
     return "RON";
   });
@@ -80,41 +103,43 @@ export default function InvoiceEditor() {
   }
 
   // Exchange rate
-  const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const [exchangeRate, setExchangeRate] = useState<number>(initialData?.exchangeRate ?? 1);
   const [rateDate, setRateDate] = useState<string>("");
   const [rateLoading, setRateLoading] = useState(false);
 
   // Items
-  const [items, setItems] = useState<InvoiceItemForm[]>([EMPTY_ITEM()]);
+  const [items, setItems] = useState<InvoiceItemForm[]>(initialData?.items ?? [EMPTY_ITEM()]);
 
   // Invoice meta
-  const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [issueDate, setIssueDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [dueDate, setDueDate] = useState("");
-  const [shipDate, setShipDate] = useState("");
-  const [notes, setNotes] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState(initialData?.number ?? "");
+  const [issueDate, setIssueDate] = useState(initialData?.issueDate ?? new Date().toISOString().split("T")[0]);
+  const [dueDate, setDueDate] = useState(initialData?.dueDate ?? "");
+  const [shipDate, setShipDate] = useState(initialData?.shipDate ?? "");
+  const [notes, setNotes] = useState(initialData?.notes ?? "");
   const [footerText, setFooterText] = useState(
+    initialData?.footerText ??
     "Factura circulă fără semnătura și ștampila conform Lg. 227/2015-Codul fiscal art 319(aliniat 29)."
   );
 
   const [saving, setSaving] = useState(false);
 
-  // Dirty tracking & exit confirmation
+  // Dirty tracking & exit confirmation — only for create mode
   const [isDirty, setIsDirty] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   const hasContent = !!client || items.some((i) => i.name.trim()) || !!notes || invoiceNumber.trim() !== "";
-  useEffect(() => { if (hasContent) setIsDirty(true); }, [hasContent]);
+  useEffect(() => { if (!isEdit && hasContent) setIsDirty(true); }, [hasContent, isEdit]);
 
   useEffect(() => {
+    if (isEdit) return;
     function handler(e: BeforeUnloadEvent) { if (isDirty) e.preventDefault(); }
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, [isDirty]);
+  }, [isDirty, isEdit]);
 
   useEffect(() => {
-    if (!isDirty) return;
+    if (isEdit || !isDirty) return;
     function handler(e: MouseEvent) {
       const anchor = (e.target as Element).closest("a[href]");
       if (!anchor) return;
@@ -127,7 +152,7 @@ export default function InvoiceEditor() {
     document.addEventListener("click", handler, true);
     return () => document.removeEventListener("click", handler, true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDirty]);
+  }, [isDirty, isEdit]);
 
   function navigate(href: string) {
     if (isDirty) { setPendingHref(href); setShowExitModal(true); }
@@ -192,7 +217,7 @@ export default function InvoiceEditor() {
 
   async function saveInvoice() {
     if (!company) { toast.error("Adaugă datele companiei tale înainte de a genera facturi"); return; }
-    if (!client) { toast.error("Selectați un client"); return; }
+    if (!client)  { toast.error("Selectați un client"); return; }
     if (exchangeRate <= 0) { toast.error("Cursul valutar este invalid"); return; }
     const validItems = items.filter((i) => i.name.trim() && Number(i.quantity) > 0 && Number(i.priceEur) > 0);
     if (validItems.length === 0) {
@@ -202,6 +227,7 @@ export default function InvoiceEditor() {
 
     setSaving(true);
     try {
+      // Ensure client exists in DB
       let clientId = client.id;
       if (!clientId) {
         const cr = await fetch("/api/clients", {
@@ -214,34 +240,50 @@ export default function InvoiceEditor() {
         clientId = saved.id;
       }
 
-      const res = await fetch("/api/invoices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientId,
-          companyId: company?.id,
-          invoiceNumber: invoiceNumber.trim() || undefined,
-          currency,
-          issueDate,
-          dueDate: dueDate || undefined,
-          shipDate: shipDate || undefined,
-          exchangeRate,
-          vatRate: vatEnabled ? vatRate : 0,
-          notes: notes || undefined,
-          footerText,
-          items: computedItems.filter((i) => i.name.trim() && Number(i.quantity) > 0 && Number(i.priceEur) > 0),
-        }),
-      });
+      const payload = {
+        clientId,
+        companyId: company?.id,
+        number: invoiceNumber.trim() || undefined,
+        currency,
+        issueDate,
+        dueDate:   dueDate   || undefined,
+        shipDate:  shipDate  || undefined,
+        exchangeRate,
+        vatRate: vatEnabled ? vatRate : 0,
+        notes:   notes      || undefined,
+        footerText,
+        items: computedItems.filter((i) => i.name.trim() && Number(i.quantity) > 0 && Number(i.priceEur) > 0),
+      };
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error ?? "Eroare salvare factură");
+      if (isEdit) {
+        // PATCH existing invoice
+        const res = await fetch(`/api/invoices/${invoiceId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error ?? "Eroare actualizare factură");
+        }
+        toast.success("Factura a fost actualizată!");
+        router.refresh();
+      } else {
+        // POST new invoice
+        const res = await fetch("/api/invoices", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error ?? "Eroare salvare factură");
+        }
+        const invoice = await res.json();
+        setIsDirty(false);
+        toast.success(`Factura ${invoice.number} a fost creată!`);
+        router.push(`/invoices/${invoice.id}`);
       }
-
-      const invoice = await res.json();
-      setIsDirty(false);
-      toast.success(`Factura ${invoice.number} a fost creată!`);
-      router.push(`/invoices/${invoice.id}`);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Eroare necunoscută");
     } finally {
@@ -462,8 +504,8 @@ export default function InvoiceEditor() {
               disabled={saving}
               className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
             >
-              {saving ? <Loader2 size={15} className="animate-spin" /> : <FileDown size={15} />}
-              Salvează factura
+              {saving ? <Loader2 size={15} className="animate-spin" /> : isEdit ? <Pencil size={15} /> : <FileDown size={15} />}
+              {isEdit ? "Salvează modificările" : "Salvează factura"}
             </button>
           </div>
         </div>
@@ -480,11 +522,11 @@ export default function InvoiceEditor() {
           dueDate={dueDate}
           shipDate={shipDate}
           footerText={footerText}
-          invoiceNumber={invoiceNumber || undefined}
+          invoiceNumber={invoiceNumber || (isEdit ? initialData?.number : undefined)}
         />
       )}
 
-      {/* Exit confirmation modal */}
+      {/* Exit confirmation modal — only in create mode */}
       {showExitModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 shadow-xl w-full max-w-sm p-6">

@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { requirePageSession } from "@/lib/session";
 import { formatCurrency } from "@/lib/calculations";
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle2, Clock, Users } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle2, Users, Package } from "lucide-react";
 import RevenueChart from "@/components/analytics/RevenueChart";
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -112,6 +112,43 @@ export default async function AnalyticsPage() {
     .sort((a, b) => b.total - a.total)
     .slice(0, 8);
 
+  // ── Service revenue breakdown ────────────────────────────────────────────
+
+  const serviceItems = await prisma.invoiceItem.findMany({
+    where: {
+      invoice: {
+        userId,
+        status: { in: ["PAID", "SENT"] },
+      },
+    },
+    select: {
+      name: true,
+      quantity: true,
+      priceEur: true,
+      subtotalRon: true,
+    },
+  });
+
+  const serviceMap: Record<string, { total: number; count: number; totalQty: number }> = {};
+  for (const item of serviceItems) {
+    const key = item.name.trim();
+    if (!key) continue;
+    if (!serviceMap[key]) serviceMap[key] = { total: 0, count: 0, totalQty: 0 };
+    serviceMap[key].total    += Number(item.subtotalRon);
+    serviceMap[key].count    += 1;
+    serviceMap[key].totalQty += Number(item.quantity);
+  }
+  const topServices = Object.entries(serviceMap)
+    .map(([name, s]) => ({
+      name,
+      total: Math.round(s.total),
+      count: s.count,
+      avgPrice: s.totalQty > 0 ? s.total / s.totalQty : 0,
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 8);
+  const serviceMaxTotal = topServices[0]?.total ?? 1;
+
   // ── Overdue aging ─────────────────────────────────────────────────────────
 
   const aging = { d30: 0, d60: 0, d90: 0, d90plus: 0 };
@@ -202,6 +239,39 @@ export default async function AnalyticsPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Service revenue breakdown ── */}
+      {topServices.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Package size={15} className="text-slate-500" />
+            <h2 className="text-sm font-semibold text-slate-800">Servicii facturate</h2>
+            <span className="text-xs text-slate-400 ml-auto">venituri per serviciu (RON, facturi emise + plătite)</span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+            {topServices.map((s, i) => {
+              const pct = serviceMaxTotal > 0 ? (s.total / serviceMaxTotal) * 100 : 0;
+              return (
+                <div key={i}>
+                  <div className="flex items-center justify-between mb-1 gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-xs text-slate-400 w-4 shrink-0">{i + 1}.</span>
+                      <span className="text-sm font-medium text-slate-700 truncate">{s.name}</span>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <span className="text-sm font-semibold text-slate-900 tabular-nums">{formatCurrency(s.total, "RON")}</span>
+                      <span className="text-xs text-slate-400 ml-1.5">{s.count}×</span>
+                    </div>
+                  </div>
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-violet-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Top clients + Overdue aging ── */}
       <div className="grid grid-cols-2 gap-6">

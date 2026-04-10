@@ -90,6 +90,7 @@ export async function POST(req: NextRequest) {
       clientId:       body.clientId,
       companyId:      body.companyId,
       templateId:     body.templateId,
+      status:         "SENT",
       currency:       body.currency ?? "RON",
       issueDate:      body.issueDate ? new Date(body.issueDate) : new Date(),
       dueDate:        body.dueDate   ? new Date(body.dueDate)   : null,

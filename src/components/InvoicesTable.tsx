@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { FileDown, Copy, Trash2 } from "lucide-react";
+import { FileDown, Copy, Trash2, Pencil } from "lucide-react";
 import { formatCurrency } from "@/lib/calculations";
 
 interface Invoice {
@@ -18,13 +18,12 @@ interface Invoice {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  DRAFT:     "bg-slate-100 text-slate-600",
   SENT:      "bg-blue-100 text-blue-700",
   PAID:      "bg-green-100 text-green-700",
   CANCELLED: "bg-red-100 text-red-600",
 };
 const STATUS_LABELS: Record<string, string> = {
-  DRAFT: "Ciornă", SENT: "Trimisă", PAID: "Plătită", CANCELLED: "Anulată",
+  SENT: "Trimisă", PAID: "Plătită", CANCELLED: "Anulată",
 };
 
 export default function InvoicesTable({ initial }: { initial: Invoice[] }) {
@@ -85,6 +84,13 @@ export default function InvoicesTable({ initial }: { initial: Invoice[] }) {
             </td>
             <td className="px-6 py-4 text-center">
               <div className="flex items-center justify-center gap-1">
+                <Link
+                  href={`/invoices/${inv.id}`}
+                  className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 transition-colors"
+                  title="Editează"
+                >
+                  <Pencil size={15} />
+                </Link>
                 <a
                   href={`/api/invoices/${inv.id}/pdf`}
                   target="_blank"

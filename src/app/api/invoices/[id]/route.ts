@@ -47,14 +47,16 @@ export async function PATCH(
   if (!existing) return NextResponse.json({ error: "Factura nu a fost găsită" }, { status: 404 });
 
   const body = await req.json();
-  let totalsUpdate: { totalEur?: number; totalRon?: number } = {};
+  const exchangeRate = body.exchangeRate ?? Number(existing.exchangeRate);
+  const vatRate = body.vatRate ?? 0;
+
+  let totals: ReturnType<typeof computeInvoice>["totals"] | null = null;
   let itemsToCreate: InvoiceItemForm[] = [];
 
   if (body.items) {
-    const exchangeRate = body.exchangeRate ?? Number(existing.exchangeRate);
-    const { items: computed, totals } = computeInvoice(body.items, exchangeRate);
-    totalsUpdate = totals;
-    itemsToCreate = computed;
+    const computed = computeInvoice(body.items, exchangeRate, vatRate);
+    totals = computed.totals;
+    itemsToCreate = computed.items;
   }
 
   const invoice = await prisma.$transaction(async (tx) => {
@@ -64,13 +66,23 @@ export async function PATCH(
     return tx.invoice.update({
       where: { id: params.id },
       data: {
-        ...(body.status     && { status:     body.status }),
+        ...(body.status       && { status:     body.status }),
+        ...(body.clientId     && { clientId:   body.clientId }),
+        ...(body.currency     && { currency:   body.currency }),
+        ...(body.number       && { number:     body.number }),
+        ...(body.issueDate    && { issueDate:  new Date(body.issueDate) }),
         ...(body.dueDate    !== undefined && { dueDate:  body.dueDate  ? new Date(body.dueDate)  : null }),
         ...(body.shipDate   !== undefined && { shipDate: body.shipDate ? new Date(body.shipDate) : null }),
         ...(body.notes      !== undefined && { notes:      body.notes      }),
         ...(body.footerText !== undefined && { footerText: body.footerText }),
         ...(body.exchangeRate && { exchangeRate: body.exchangeRate }),
-        ...totalsUpdate,
+        ...(totals && {
+          totalEur:        totals.totalEur,
+          totalRon:        totals.totalRon,
+          vatRate:         vatRate > 0 ? vatRate : null,
+          vatAmountRon:    vatRate > 0 ? totals.vatAmountRon    : null,
+          totalWithVatRon: vatRate > 0 ? totals.totalWithVatRon : null,
+        }),
         ...(itemsToCreate.length > 0 && {
           items: {
             create: itemsToCreate.map((item) => ({
