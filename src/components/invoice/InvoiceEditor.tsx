@@ -61,12 +61,20 @@ export default function InvoiceEditor() {
   // Client
   const [client, setClient] = useState<SelectedClient | null>(null);
 
-  // Currency — selected on the invoice
-  const [currency, setCurrency] = useState("RON");
+  // VAT — driven by client.vatPayer, rate from company or default 19
+  const vatEnabled = !!client?.vatPayer;
+  const vatRate = Number(company?.vatRate ?? 19);
+
+  // Currency — selected on the invoice, persisted in localStorage
+  const [currency, setCurrency] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("invoice_currency") ?? "RON";
+    return "RON";
+  });
   const needsRate = currency !== "RON";
 
   function handleCurrencyChange(cur: string) {
     setCurrency(cur);
+    if (typeof window !== "undefined") localStorage.setItem("invoice_currency", cur);
     if (cur !== "RON") fetchRate(cur);
     else { setExchangeRate(1); setRateDate(""); }
   }
@@ -75,10 +83,6 @@ export default function InvoiceEditor() {
   const [exchangeRate, setExchangeRate] = useState<number>(1);
   const [rateDate, setRateDate] = useState<string>("");
   const [rateLoading, setRateLoading] = useState(false);
-
-  // VAT
-  const [vatEnabled, setVatEnabled] = useState(false);
-  const [vatRate, setVatRate] = useState(19);
 
   // Items
   const [items, setItems] = useState<InvoiceItemForm[]>([EMPTY_ITEM()]);
@@ -364,16 +368,23 @@ export default function InvoiceEditor() {
               </div>
             </div>
 
-            <div className={`grid ${needsRate ? "grid-cols-[40px_1fr_80px_90px_110px_110px_110px_40px]" : "grid-cols-[40px_1fr_80px_90px_110px_110px_40px]"} gap-2 px-4 py-2 bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-100`}>
-              <span className="text-center">Nr.</span>
-              <span>Denumire serviciu</span>
-              <span className="text-center">U.M.</span>
-              <span className="text-right">Cantitate</span>
-              <span className="text-right">Preț {currency}</span>
-              <span className="text-right">Subtotal {currency}</span>
-              {needsRate && <span className="text-right">Subtotal RON</span>}
-              <span />
-            </div>
+            {(() => {
+              const cols = ["40px", "1fr", "80px", "90px", "110px", "110px", ...(needsRate ? ["110px"] : []), ...(vatEnabled ? ["90px", "110px"] : []), "40px"].join("_");
+              return (
+                <div className={`grid grid-cols-[${cols}] gap-2 px-4 py-2 bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-100`}>
+                  <span className="text-center">Nr.</span>
+                  <span>Denumire serviciu</span>
+                  <span className="text-center">U.M.</span>
+                  <span className="text-right">Cantitate</span>
+                  <span className="text-right">Preț {currency}</span>
+                  <span className="text-right">Subtotal {currency}</span>
+                  {needsRate && <span className="text-right">Subtotal RON</span>}
+                  {vatEnabled && <span className="text-right">TVA {vatRate}%</span>}
+                  {vatEnabled && <span className="text-right">Total+TVA</span>}
+                  <span />
+                </div>
+              );
+            })()}
 
             {items.map((item, idx) => (
               <LineItemRow
@@ -381,6 +392,8 @@ export default function InvoiceEditor() {
                 item={item}
                 exchangeRate={exchangeRate}
                 currency={currency}
+                vatEnabled={vatEnabled}
+                vatRate={vatRate}
                 onChange={(updated) => updateItem(idx, updated)}
                 onRemove={items.length > 1 ? () => removeItem(idx) : undefined}
               />
@@ -400,36 +413,12 @@ export default function InvoiceEditor() {
                   <span className="font-medium">{displayTotal.toFixed(2)} RON</span>
                 </div>
 
-                {/* VAT toggle */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-200 mt-2">
-                  <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-2 cursor-pointer text-slate-600 text-xs font-medium select-none">
-                      <input
-                        type="checkbox"
-                        checked={vatEnabled}
-                        onChange={(e) => setVatEnabled(e.target.checked)}
-                        className="w-4 h-4 rounded border-slate-300 text-blue-600"
-                      />
-                      TVA
-                    </label>
-                    {vatEnabled && (
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          value={vatRate}
-                          onChange={(e) => setVatRate(Number(e.target.value))}
-                          min={0}
-                          max={100}
-                          className="w-14 px-2 py-0.5 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                        <span className="text-xs text-slate-500">%</span>
-                      </div>
-                    )}
+                {vatEnabled && (
+                  <div className="flex justify-between pt-2 border-t border-slate-200 mt-2 text-slate-600">
+                    <span>TVA {vatRate}%</span>
+                    <span className="font-medium">{totals.vatAmountRon.toFixed(2)} RON</span>
                   </div>
-                  {vatEnabled && (
-                    <span className="font-medium text-slate-700">{totals.vatAmountRon.toFixed(2)} RON</span>
-                  )}
-                </div>
+                )}
 
                 <div className="flex justify-between font-bold text-slate-900 text-base border-t border-slate-300 pt-2 mt-1">
                   <span>Total de plată</span>

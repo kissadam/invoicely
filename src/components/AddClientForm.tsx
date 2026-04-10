@@ -12,7 +12,7 @@ export default function AddClientForm() {
   const [cuiLoading, setCuiLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    name: "", cui: "", address: "", vatPayer: false, phone: "", email: "", currency: "RON",
+    name: "", cui: "", address: "", vatPayer: false, phone: "", email: "",
   });
 
   function set<K extends keyof typeof form>(key: K, val: typeof form[K]) {
@@ -52,7 +52,7 @@ export default function AddClientForm() {
       }
       toast.success(`Clientul ${form.name} a fost adăugat`);
       setOpen(false);
-      setForm({ name: "", cui: "", address: "", vatPayer: false, phone: "", email: "", currency: "RON" });
+      setForm({ name: "", cui: "", address: "", vatPayer: false, phone: "", email: "" });
       setCuiInput("");
       router.refresh();
     } catch {
@@ -133,25 +133,15 @@ export default function AddClientForm() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-4">
-            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.vatPayer}
-                onChange={(e) => set("vatPayer", e.target.checked)}
-                className="rounded"
-              />
-              Plătitor TVA
-            </label>
-            <div>
-              <label className="block text-xs text-slate-500 mb-1.5 font-medium">Monedă facturare</label>
-              <select value={form.currency} onChange={(e) => set("currency", e.target.value)} className={input}>
-                <option value="RON">RON</option>
-                <option value="EUR">EUR</option>
-                <option value="USD">USD</option>
-              </select>
-            </div>
-          </div>
+          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.vatPayer}
+              onChange={(e) => set("vatPayer", e.target.checked)}
+              className="rounded"
+            />
+            Plătitor TVA
+          </label>
         </div>
 
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-slate-100 dark:border-slate-700">
