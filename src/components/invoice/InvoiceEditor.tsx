@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Plus, RefreshCw, FileDown, Loader2, AlertTriangle } from "lucide-react";
 import { computeInvoice } from "@/lib/calculations";
 import { formatExchangeRateLine } from "@/lib/bnr";
@@ -196,10 +197,12 @@ export default function InvoiceEditor() {
   }, []);
 
   async function saveInvoice() {
+    if (!company) { toast.error("Adaugă datele companiei tale înainte de a genera facturi"); return; }
     if (!client) { toast.error("Selectați un client"); return; }
     if (exchangeRate <= 0) { toast.error("Cursul valutar este invalid"); return; }
-    if (items.length === 0 || items.every((i) => !i.name.trim())) {
-      toast.error("Adăugați cel puțin un articol");
+    const validItems = items.filter((i) => i.name.trim() && Number(i.quantity) > 0 && Number(i.priceEur) > 0);
+    if (validItems.length === 0) {
+      toast.error("Adăugați cel puțin un articol cu nume, cantitate și preț");
       return;
     }
 
@@ -232,7 +235,7 @@ export default function InvoiceEditor() {
           exchangeRate,
           notes: notes || undefined,
           footerText,
-          items: computedItems.filter((i) => i.name.trim()),
+          items: computedItems.filter((i) => i.name.trim() && Number(i.quantity) > 0 && Number(i.priceEur) > 0),
         }),
       });
 
@@ -275,6 +278,19 @@ export default function InvoiceEditor() {
           </button>
         ))}
       </div>
+
+      {!company && (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 text-sm text-amber-800">
+          <AlertTriangle size={16} className="shrink-0 text-amber-500" />
+          <span>
+            Nu ai adăugat datele companiei tale (Furnizor).{" "}
+            <Link href="/companies" className="font-semibold underline hover:text-amber-900">
+              Adaugă acum
+            </Link>{" "}
+            pentru a putea genera facturi.
+          </span>
+        </div>
+      )}
 
       {tab === "form" ? (
         <div className="space-y-6">
