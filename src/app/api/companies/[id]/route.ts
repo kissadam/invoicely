@@ -34,19 +34,28 @@ export async function PATCH(
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
-  const company = await prisma.company.update({
-    where: { id: params.id },
-    data: {
-      ...(body.cui      && { cui:      body.cui                            }),
-      ...(body.name     && { name:     body.name                           }),
-      ...(body.address  !== undefined && { address:  body.address          }),
-      ...(body.bank     !== undefined && { bank:     body.bank             }),
-      ...(body.iban     !== undefined && { iban:     body.iban             }),
-      ...(body.phone    !== undefined && { phone:    body.phone            }),
-      ...(body.email    !== undefined && { email:    body.email            }),
-      ...(body.vatPayer !== undefined && { vatPayer: Boolean(body.vatPayer) }),
-      ...(body.vatRate  !== undefined && { vatRate:  body.vatRate != null ? Number(body.vatRate) : null }),
-    },
-  });
-  return NextResponse.json(company);
+  try {
+    const company = await prisma.company.update({
+      where: { id: params.id },
+      data: {
+        ...(body.cui      && { cui:      body.cui                            }),
+        ...(body.name     && { name:     body.name                           }),
+        ...(body.address  !== undefined && { address:  body.address          }),
+        ...(body.bank     !== undefined && { bank:     body.bank             }),
+        ...(body.iban     !== undefined && { iban:     body.iban             }),
+        ...(body.phone    !== undefined && { phone:    body.phone            }),
+        ...(body.email    !== undefined && { email:    body.email            }),
+        ...(body.vatPayer !== undefined && { vatPayer: Boolean(body.vatPayer) }),
+        ...(body.vatRate  !== undefined && { vatRate:  body.vatRate != null ? Number(body.vatRate) : null }),
+      },
+    });
+    return NextResponse.json(company);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const isDupe = msg.includes("Unique constraint") || msg.includes("P2002");
+    return NextResponse.json(
+      { error: isDupe ? `CUI-ul "${body.cui}" există deja în baza de date` : "Eroare la salvare" },
+      { status: 400 }
+    );
+  }
 }

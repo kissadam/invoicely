@@ -72,9 +72,10 @@ export default function CompanyForm({ existing }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(trimmed),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Eroare la salvare");
-      if (!savedId) setSavedId(data.id);
+      let data: Record<string, unknown> = {};
+      try { data = await res.json(); } catch { /* empty body */ }
+      if (!res.ok) throw new Error((data.error as string) ?? `Eroare la salvare (${res.status})`);
+      if (!savedId) setSavedId(data.id as string);
       toast.success("Compania a fost salvată");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Eroare la salvare");
