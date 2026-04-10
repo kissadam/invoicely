@@ -51,7 +51,7 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
   };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div className="p-8 max-w-7xl mx-auto">
       {/* Top bar */}
       <div className="flex items-center gap-4 mb-6">
         <Link href="/invoices" className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors">
