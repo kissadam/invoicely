@@ -65,11 +65,4 @@ export function getAuthOptions(): NextAuthOptions {
   };
 }
 
-// Cached singleton
-let _authOptions: NextAuthOptions | null = null;
-export const authOptions: NextAuthOptions = new Proxy({} as NextAuthOptions, {
-  get(_target, prop) {
-    if (!_authOptions) _authOptions = getAuthOptions();
-    return (_authOptions as unknown as Record<string | symbol, unknown>)[prop as string];
-  },
-});
+export const authOptions: NextAuthOptions = getAuthOptions();
