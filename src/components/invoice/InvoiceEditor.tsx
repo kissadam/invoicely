@@ -107,6 +107,14 @@ export default function InvoiceEditor({
   const [rateDate, setRateDate] = useState<string>("");
   const [rateLoading, setRateLoading] = useState(false);
 
+  // Auto-fetch rate on mount if currency is non-RON and no rate from initialData
+  useEffect(() => {
+    if (currency !== "RON" && !initialData?.exchangeRate) {
+      fetchRate(currency);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Items
   const [items, setItems] = useState<InvoiceItemForm[]>(initialData?.items ?? [EMPTY_ITEM()]);
 
