@@ -84,13 +84,15 @@ export default function InvoicesTable({ initial }: { initial: Invoice[] }) {
             </td>
             <td className="px-6 py-4 text-center">
               <div className="flex items-center justify-center gap-1">
-                <Link
-                  href={`/invoices/${inv.id}`}
-                  className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 transition-colors"
-                  title="Editează"
-                >
-                  <Pencil size={15} />
-                </Link>
+                {inv.status !== "PAID" && (
+                  <Link
+                    href={`/invoices/${inv.id}`}
+                    className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 transition-colors"
+                    title="Editează"
+                  >
+                    <Pencil size={15} />
+                  </Link>
+                )}
                 <a
                   href={`/api/invoices/${inv.id}/pdf`}
                   target="_blank"
