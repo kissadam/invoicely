@@ -177,28 +177,28 @@ export default function InvoicePreview({
             )}
           </div>
 
-          <div style={{ minWidth: 260 }}>
+          <div style={{ minWidth: 280, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "12px 16px" }}>
             {needsRate && (
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 12, color: "#475569", borderBottom: "1px solid #f1f5f9" }}>
-                <span>Total {currency}</span>
-                <span style={{ fontWeight: 500 }}>{formatCurrency(totals.totalEur, currency)}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 12, color: "#64748b", borderBottom: "1px solid #e2e8f0" }}>
+                <span>Total {currency}{vatEnabled ? " (TVA inclus)" : ""}</span>
+                <span style={{ fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>{formatCurrency(totals.totalEur, currency)}</span>
               </div>
             )}
             {vatEnabled && (
               <>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 12, color: "#475569", borderBottom: "1px solid #f1f5f9" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 12, color: "#64748b", borderBottom: "1px solid #e2e8f0" }}>
                   <span>Total fără TVA</span>
-                  <span style={{ fontWeight: 500 }}>{formatCurrency(needsRate ? totals.totalRon : totals.totalEur, "RON")}</span>
+                  <span style={{ fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>{formatCurrency(needsRate ? totals.totalRon : totals.totalEur, "RON")}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 12, color: "#d97706", borderBottom: "1px solid #f1f5f9" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 12, color: "#b45309", borderBottom: "1px solid #e2e8f0" }}>
                   <span>TVA {totals.vatRate}%</span>
-                  <span style={{ fontWeight: 500 }}>{formatCurrency(totals.vatAmountRon, "RON")}</span>
+                  <span style={{ fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>{formatCurrency(totals.vatAmountRon, "RON")}</span>
                 </div>
               </>
             )}
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0 0", fontSize: 15, fontWeight: 700, color: "#0f172a" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 10, marginTop: 4, fontSize: 15, fontWeight: 700, color: "#0f172a" }}>
               <span>{vatEnabled ? "Total de plată (TVA inclus)" : "Total de plată"}</span>
-              <span>{formatCurrency(vatEnabled ? totals.totalWithVatRon : (needsRate ? totals.totalRon : totals.totalEur), "RON")}</span>
+              <span style={{ fontVariantNumeric: "tabular-nums" }}>{formatCurrency(vatEnabled ? totals.totalWithVatRon : (needsRate ? totals.totalRon : totals.totalEur), "RON")}</span>
             </div>
           </div>
         </div>

@@ -398,31 +398,29 @@ export default function InvoiceEditor() {
             ))}
 
             {/* Totals */}
-            <div className="flex justify-end px-4 py-4 border-t border-slate-200 bg-slate-50">
-              <div className="space-y-1 text-sm min-w-[300px]">
+            <div className="flex justify-end px-5 py-5 border-t border-slate-200 bg-slate-50">
+              <div className="min-w-[320px] space-y-0">
                 {needsRate && (
-                  <div className="flex justify-between text-slate-600">
-                    <span>Total {currency}</span>
-                    <span className="font-medium">{totals.totalEur.toFixed(2)} {currency}</span>
+                  <div className="flex justify-between py-2 text-slate-500 text-sm border-b border-slate-100">
+                    <span>Total {currency} {vatEnabled ? "(TVA inclus)" : ""}</span>
+                    <span className="font-medium tabular-nums">{totals.totalEur.toFixed(2)} {currency}</span>
                   </div>
                 )}
                 {vatEnabled && (
-                  <div className="flex justify-between text-slate-700">
+                  <div className="flex justify-between py-2 text-slate-600 text-sm border-b border-slate-100">
                     <span>Total fără TVA</span>
-                    <span className="font-medium">{displayTotal.toFixed(2)} RON</span>
+                    <span className="font-medium tabular-nums">{displayTotal.toFixed(2)} RON</span>
                   </div>
                 )}
-
                 {vatEnabled && (
-                  <div className="flex justify-between pt-2 border-t border-slate-200 mt-2 text-slate-600">
+                  <div className="flex justify-between py-2 text-amber-700 text-sm border-b border-slate-100">
                     <span>TVA {vatRate}%</span>
-                    <span className="font-medium">{totals.vatAmountRon.toFixed(2)} RON</span>
+                    <span className="font-medium tabular-nums">{totals.vatAmountRon.toFixed(2)} RON</span>
                   </div>
                 )}
-
-                <div className="flex justify-between font-bold text-slate-900 text-base border-t border-slate-300 pt-2 mt-1">
+                <div className="flex justify-between pt-3 mt-1 font-bold text-slate-900 text-base">
                   <span>{vatEnabled ? "Total de plată (TVA inclus)" : "Total de plată"}</span>
-                  <span>{(vatEnabled ? totals.totalWithVatRon : displayTotal).toFixed(2)} RON</span>
+                  <span className="tabular-nums">{(vatEnabled ? totals.totalWithVatRon : displayTotal).toFixed(2)} RON</span>
                 </div>
               </div>
             </div>
