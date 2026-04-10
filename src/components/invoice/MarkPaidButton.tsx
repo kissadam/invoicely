@@ -51,7 +51,7 @@ export default function MarkPaidButton({
       ) : (
         <Circle size={14} />
       )}
-      {isPaid ? "Plătită" : "Marchează plătită"}
+      {isPaid ? "Marcează ca neîncasată" : "Marchează plătită"}
     </button>
   );
 }

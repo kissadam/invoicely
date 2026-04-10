@@ -71,7 +71,6 @@ export default async function AnalyticsPage() {
   // ── Invoice funnel ────────────────────────────────────────────────────────
 
   const allInvoices = await prisma.invoice.findMany({ where: { userId } });
-  const funnelDraft     = allInvoices.filter((i) => i.status === "DRAFT").length;
   const funnelSent      = allInvoices.filter((i) => i.status === "SENT").length;
   const funnelPaid      = allInvoices.filter((i) => i.status === "PAID").length;
   const funnelCancelled = allInvoices.filter((i) => i.status === "CANCELLED").length;
@@ -333,8 +332,7 @@ export default async function AnalyticsPage() {
           <h2 className="text-sm font-semibold text-slate-800 mb-1">Starea facturilor</h2>
           <p className="text-xs text-slate-400 mb-5">Rata conversie: <span className="font-semibold text-slate-700">{conversionRate}%</span></p>
           <div className="space-y-3">
-            <FunnelRow label="Ciornă"   count={funnelDraft}     total={funnelTotal} color="bg-slate-300"  />
-            <FunnelRow label="Trimisă"  count={funnelSent}      total={funnelTotal} color="bg-blue-400"   />
+            <FunnelRow label="Pregătită" count={funnelSent}      total={funnelTotal} color="bg-slate-400"  />
             <FunnelRow label="Plătită"  count={funnelPaid}      total={funnelTotal} color="bg-green-500"  />
             <FunnelRow label="Anulată"  count={funnelCancelled} total={funnelTotal} color="bg-red-300"    />
           </div>

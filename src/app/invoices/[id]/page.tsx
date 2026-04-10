@@ -59,9 +59,13 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
         </Link>
         <div className="flex-1 flex items-center gap-3">
           <h1 className="text-xl font-bold text-slate-900">{invoice.number}</h1>
-          {invoice.status === "PAID" && (
+          {invoice.status === "PAID" ? (
             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 flex items-center gap-1">
               <CheckCircle2 size={11} /> Plătită
+            </span>
+          ) : (
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+              Pregătită
             </span>
           )}
         </div>
