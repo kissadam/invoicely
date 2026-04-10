@@ -14,7 +14,7 @@ export default async function InvoicesPage() {
   const userId = await requirePageSession();
   const invoices = await prisma.invoice.findMany({
     where: { userId },
-    include: { client: { select: { name: true, cui: true } } },
+    include: { client: { select: { name: true, cui: true, vatPayer: true } } },
     orderBy: { createdAt: "desc" },
   });
 
