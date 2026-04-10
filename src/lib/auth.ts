@@ -1,13 +1,8 @@
 import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { PrismaAdapter } = require("@next-auth/prisma-adapter");
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { prisma } = require("./prisma");
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
-  adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -19,9 +14,25 @@ export const authOptions: NextAuthOptions = {
     error: "/login?error=1",
   },
   callbacks: {
-    async jwt({ token, user, account }) {
-      if (user) token.id = user.id;
-      if (account) token.provider = account.provider;
+    async jwt({ token, account }) {
+      // On first sign-in, upsert the user into the database
+      if (account) {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { prisma } = require("./prisma");
+        const dbUser = await prisma.user.upsert({
+          where: { email: token.email! },
+          create: {
+            email: token.email!,
+            name: token.name ?? null,
+            image: token.picture ?? null,
+          },
+          update: {
+            name: token.name ?? null,
+            image: token.picture ?? null,
+          },
+        });
+        token.id = dbUser.id;
+      }
       return token;
     },
     async session({ session, token }) {
