@@ -10,7 +10,7 @@ import { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, RefreshCw, FileDown, Loader2, AlertTriangle, Pencil, Sparkles, X } from "lucide-react";
+import { Plus, RefreshCw, FileDown, Loader2, AlertTriangle, Pencil, Sparkles, X, CheckCircle2 } from "lucide-react";
 import { computeInvoice } from "@/lib/calculations";
 import { formatExchangeRateLine } from "@/lib/bnr";
 import type { InvoiceItemForm } from "@/types/invoice";
@@ -63,13 +63,15 @@ export interface EditableInvoice {
 export default function InvoiceEditor({
   invoiceId,
   initialData,
+  readOnly = false,
 }: {
   invoiceId?: string;
   initialData?: EditableInvoice;
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const isEdit = !!invoiceId;
-  const [tab, setTab] = useState<"form" | "preview">("form");
+  const [tab, setTab] = useState<"form" | "preview">(readOnly ? "preview" : "form");
 
   // Supplier company
   const [company, setCompany] = useState<Company | null>(null);
@@ -342,7 +344,7 @@ export default function InvoiceEditor({
     <div className="space-y-6">
       {/* Tab switcher */}
       <div className="flex gap-2 border-b border-slate-200">
-        {(["form", "preview"] as const).map((t) => (
+        {(["form", "preview"] as const).filter((t) => !readOnly || t === "preview").map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -354,6 +356,13 @@ export default function InvoiceEditor({
           </button>
         ))}
       </div>
+
+      {readOnly && (
+        <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-5 py-3 text-sm text-green-800">
+          <CheckCircle2 size={15} className="shrink-0 text-green-500" />
+          Factura este marcată ca <strong>Plătită</strong> și nu mai poate fi editată. Marchează ca neîncasată pentru a o edita din nou.
+        </div>
+      )}
 
       {!company && (
         <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 text-sm text-amber-800">

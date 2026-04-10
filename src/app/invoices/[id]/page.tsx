@@ -88,7 +88,7 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
         </div>
       </div>
 
-      <InvoiceEditor invoiceId={invoice.id} initialData={initialData} />
+      <InvoiceEditor invoiceId={invoice.id} initialData={initialData} readOnly={invoice.status === "PAID"} />
     </div>
   );
 }
