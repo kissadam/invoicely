@@ -42,7 +42,7 @@ export default function LineItemRow({ item, exchangeRate, currency, vatEnabled =
   ].join(" ");
 
   return (
-    <div className="grid gap-2 px-4 py-2.5 border-b border-slate-50 items-start hover:bg-slate-50/50 transition-colors" style={{ gridTemplateColumns }}>
+    <div className="grid gap-2 px-4 py-2.5 border-b border-slate-50 items-center hover:bg-slate-50/50 transition-colors" style={{ gridTemplateColumns }}>
       <span className="text-center text-xs text-slate-400 font-medium">{item.position}</span>
 
       <textarea
