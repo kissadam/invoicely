@@ -104,7 +104,19 @@ export default async function AnalyticsPage() {
     ? last3Keys.reduce((s, mk) => s + (revenueByMonth[mk] ?? 0), 0) / last3Keys.length
     : 0;
 
-  // ── Top clients ───────────────────────────────────────────────────────────
+  // ── Avg invoice value trend (12 months) ──────────────────────────────────
+
+  const avgValueByMonth = months12.map((mk) => {
+    const monthPaid = paid.filter((i) => monthKey(new Date(i.issueDate)) === mk);
+    return {
+      month: RO_MONTHS[parseInt(mk.split("-")[1]) - 1],
+      avg: monthPaid.length > 0 ? Math.round(monthPaid.reduce((s, i) => s + effectiveTotal(i), 0) / monthPaid.length) : 0,
+      count: monthPaid.length,
+      isCurrent: mk === thisMonthKey,
+    };
+  });
+
+  // ── Top clients + Pareto concentration ───────────────────────────────────
 
   const clientMap: Record<string, { name: string; total: number; count: number }> = {};
   for (const inv of billed) {
@@ -113,9 +125,23 @@ export default async function AnalyticsPage() {
     clientMap[id].total += effectiveTotal(inv);
     clientMap[id].count++;
   }
-  const topClients = Object.values(clientMap)
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 8);
+  const allClientsSorted = Object.values(clientMap).sort((a, b) => b.total - a.total);
+  const topClients = allClientsSorted.slice(0, 8);
+
+  // Pareto: cumulative revenue % as clients are added in order
+  let cumulative = 0;
+  const paretoRows = allClientsSorted.map((c, i) => {
+    cumulative += c.total;
+    return {
+      rank: i + 1,
+      name: c.name,
+      total: c.total,
+      cumulativePct: totalBilled > 0 ? (cumulative / totalBilled) * 100 : 0,
+      ownPct: totalBilled > 0 ? (c.total / totalBilled) * 100 : 0,
+    };
+  });
+  // Find how many top clients cover 80% of revenue
+  const top80Count = paretoRows.findIndex((r) => r.cumulativePct >= 80) + 1 || paretoRows.length;
 
   // ── Service revenue breakdown ────────────────────────────────────────────
 
@@ -497,226 +523,6 @@ export default async function AnalyticsPage() {
         </div>
       )}
 
-      {/* ── Revenue chart + Funnel ── */}
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2 bg-white rounded-xl border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-sm font-semibold text-slate-800">Venituri încasate</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Ultimele 12 luni (RON)</p>
-            </div>
-            <div className="text-right">
-              <div className="text-lg font-bold text-slate-900 tabular-nums">
-                {formatCurrency(collectedThisMonth, "RON")}
-              </div>
-              <div className="text-xs text-slate-400">luna curentă</div>
-            </div>
-          </div>
-          <RevenueChart data={chartData} currency="RON" />
-        </div>
-
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h2 className="text-sm font-semibold text-slate-800 mb-1">Starea facturilor</h2>
-          <p className="text-xs text-slate-400 mb-5">Rata conversie: <span className="font-semibold text-slate-700">{conversionRate}%</span></p>
-          <div className="space-y-3">
-            <FunnelRow label="Pregătită" count={funnelSent}      total={funnelTotal} color="bg-slate-400"  />
-            <FunnelRow label="Plătită"  count={funnelPaid}      total={funnelTotal} color="bg-green-500"  />
-            <FunnelRow label="Anulată"  count={funnelCancelled} total={funnelTotal} color="bg-red-300"    />
-          </div>
-          <div className="mt-5 pt-4 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-500">
-            <CheckCircle2 size={13} className="text-green-500" />
-            {funnelPaid} din {funnelTotal} facturi plătite
-          </div>
-        </div>
-      </div>
-
-      {/* ── Service revenue breakdown ── */}
-      {topServices.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <Package size={15} className="text-slate-500" />
-            <h2 className="text-sm font-semibold text-slate-800">Servicii facturate</h2>
-            <span className="text-xs text-slate-400 ml-auto">venituri per serviciu (RON, facturi emise + plătite)</span>
-          </div>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-            {topServices.map((s, i) => {
-              const pct = serviceMaxTotal > 0 ? (s.total / serviceMaxTotal) * 100 : 0;
-              return (
-                <div key={i}>
-                  <div className="flex items-center justify-between mb-1 gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-xs text-slate-400 w-4 shrink-0">{i + 1}.</span>
-                      <span className="text-sm font-medium text-slate-700 truncate">{s.name}</span>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <span className="text-sm font-semibold text-slate-900 tabular-nums">{formatCurrency(s.total, "RON")}</span>
-                      <span className="text-xs text-slate-400 ml-1.5">{s.count}×</span>
-                    </div>
-                  </div>
-                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-violet-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── Top clients + Overdue aging ── */}
-      <div className="grid grid-cols-2 gap-6">
-
-        {/* Top Clients */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <Users size={15} className="text-slate-500" />
-            <h2 className="text-sm font-semibold text-slate-800">Top clienți</h2>
-          </div>
-          {topClients.length === 0 ? (
-            <p className="text-sm text-slate-400 py-4 text-center">Nicio factură emisă încă</p>
-          ) : (
-            <div className="space-y-3">
-              {topClients.map((c, i) => {
-                const pct = totalBilled > 0 ? (c.total / totalBilled) * 100 : 0;
-                return (
-                  <div key={i}>
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-xs text-slate-400 w-4 shrink-0">{i + 1}.</span>
-                        <span className="text-sm font-medium text-slate-700 truncate">{c.name}</span>
-                        <span className="text-xs text-slate-400 shrink-0">{c.count} fact.</span>
-                      </div>
-                      <div className="text-right shrink-0 ml-3">
-                        <span className="text-sm font-semibold text-slate-900 tabular-nums">
-                          {formatCurrency(c.total, "RON")}
-                        </span>
-                        <span className="text-xs text-slate-400 ml-1.5">{pct.toFixed(0)}%</span>
-                      </div>
-                    </div>
-                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-500 rounded-full transition-all"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Overdue Aging */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <AlertTriangle size={15} className="text-amber-500" />
-            <h2 className="text-sm font-semibold text-slate-800">Restanțe pe grupe de vârstă</h2>
-          </div>
-          {totalOverdue === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 gap-2">
-              <CheckCircle2 size={28} className="text-green-400" />
-              <p className="text-sm text-slate-500 font-medium">Toate facturile sunt la zi!</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <AgingRow label="1–30 zile"  amount={aging.d30}     total={totalOverdue} color="bg-amber-300"  />
-              <AgingRow label="31–60 zile" amount={aging.d60}     total={totalOverdue} color="bg-orange-400" />
-              <AgingRow label="61–90 zile" amount={aging.d90}     total={totalOverdue} color="bg-red-400"    />
-              <AgingRow label="90+ zile"   amount={aging.d90plus} total={totalOverdue} color="bg-red-600"    />
-              <div className="pt-3 border-t border-slate-100 flex justify-between text-sm font-semibold text-slate-800">
-                <span>Total restanțe</span>
-                <span className="tabular-nums text-red-600">{formatCurrency(totalOverdue, "RON")}</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Year-over-year ── */}
-      {(thisYearRev > 0 || lastYearRev > 0) && (
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl border border-slate-200 p-5">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">{lastYear}</p>
-            <p className="text-2xl font-bold text-slate-700 tabular-nums">{formatCurrency(Math.round(lastYearRev), "RON")}</p>
-            <p className="text-xs text-slate-400 mt-1">{lastYearInvoices} facturi emise</p>
-          </div>
-          <div className="bg-white rounded-xl border border-blue-100 p-5">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">{thisYear}</p>
-            <p className="text-2xl font-bold text-slate-900 tabular-nums">{formatCurrency(Math.round(thisYearRev), "RON")}</p>
-            <p className="text-xs text-slate-400 mt-1">{thisYearInvoices} facturi emise</p>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-center">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Creștere an/an</p>
-            {yoyPct === null ? (
-              <p className="text-sm text-slate-400">Date insuficiente</p>
-            ) : (
-              <p className={`text-3xl font-bold tabular-nums ${yoyPct > 0 ? "text-green-600" : yoyPct < 0 ? "text-red-500" : "text-slate-400"}`}>
-                {yoyPct > 0 ? "+" : ""}{yoyPct.toFixed(1)}%
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Currency breakdown + Invoice size distribution ── */}
-      {billed.length > 0 && (
-        <div className="grid grid-cols-2 gap-6">
-
-          {/* Currency breakdown */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h2 className="text-sm font-semibold text-slate-800 mb-5">Structură pe monede</h2>
-            {currencyRows.length === 0 ? (
-              <p className="text-sm text-slate-400">Fără date</p>
-            ) : (
-              <div className="space-y-4">
-                {currencyRows.map((r) => {
-                  const pct = (r.totalRon / currencyMax) * 100;
-                  return (
-                    <div key={r.cur}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-slate-700 w-10">{r.cur}</span>
-                          <span className="text-xs text-slate-400">{r.count} facturi</span>
-                        </div>
-                        <span className="text-sm font-semibold text-slate-900 tabular-nums">{formatCurrency(Math.round(r.totalRon), "RON")}</span>
-                      </div>
-                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Invoice size distribution */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h2 className="text-sm font-semibold text-slate-800 mb-5">Distribuție valori facturi</h2>
-            <div className="space-y-4">
-              {sizeBuckets.map((b, i) => {
-                const pct = (b.count / sizeTotal) * 100;
-                const colors = ["bg-slate-300", "bg-blue-400", "bg-blue-600", "bg-violet-600"];
-                return (
-                  <div key={i}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs text-slate-600 font-medium">{b.label}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400">{b.count} fact.</span>
-                        <span className="text-xs font-semibold text-slate-700 w-10 text-right">{pct.toFixed(0)}%</span>
-                      </div>
-                    </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className={`h-full ${colors[i]} rounded-full`} style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── Client payment behavior ── */}
       {clientPayRows.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -743,6 +549,193 @@ export default async function AnalyticsPage() {
                   </div>
                   <div className="ml-7 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div className={`h-full ${color} rounded-full`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Distribuție valori facturi + Starea facturilor ── */}
+      {billed.length > 0 && (
+        <div className="grid grid-cols-2 gap-6">
+
+          {/* Invoice size distribution */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <h2 className="text-sm font-semibold text-slate-800 mb-5">Distribuție valori facturi</h2>
+            <div className="space-y-4">
+              {sizeBuckets.map((b, i) => {
+                const pct = (b.count / sizeTotal) * 100;
+                const colors = ["bg-slate-300", "bg-blue-400", "bg-blue-600", "bg-violet-600"];
+                return (
+                  <div key={i}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs text-slate-600 font-medium">{b.label}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400">{b.count} fact.</span>
+                        <span className="text-xs font-semibold text-slate-700 w-10 text-right">{pct.toFixed(0)}%</span>
+                      </div>
+                    </div>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className={`h-full ${colors[i]} rounded-full`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Funnel / Starea facturilor */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <h2 className="text-sm font-semibold text-slate-800 mb-1">Starea facturilor</h2>
+            <p className="text-xs text-slate-400 mb-5">Rata conversie: <span className="font-semibold text-slate-700">{conversionRate}%</span></p>
+            <div className="space-y-3">
+              <FunnelRow label="Pregătită" count={funnelSent}      total={funnelTotal} color="bg-slate-400"  />
+              <FunnelRow label="Plătită"  count={funnelPaid}      total={funnelTotal} color="bg-green-500"  />
+              <FunnelRow label="Anulată"  count={funnelCancelled} total={funnelTotal} color="bg-red-300"    />
+            </div>
+            <div className="mt-5 pt-4 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-500">
+              <CheckCircle2 size={13} className="text-green-500" />
+              {funnelPaid} din {funnelTotal} facturi plătite
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Servicii facturate + Top clienți ── */}
+      <div className="grid grid-cols-2 gap-6">
+
+        {/* Services */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Package size={15} className="text-slate-500" />
+            <h2 className="text-sm font-semibold text-slate-800">Servicii facturate</h2>
+            <span className="text-xs text-slate-400 ml-auto">RON, emise + plătite</span>
+          </div>
+          {topServices.length === 0 ? (
+            <p className="text-sm text-slate-400 py-4 text-center">Fără servicii înregistrate</p>
+          ) : (
+            <div className="space-y-3">
+              {topServices.map((s, i) => {
+                const pct = serviceMaxTotal > 0 ? (s.total / serviceMaxTotal) * 100 : 0;
+                return (
+                  <div key={i}>
+                    <div className="flex items-center justify-between mb-1 gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-xs text-slate-400 w-4 shrink-0">{i + 1}.</span>
+                        <span className="text-sm font-medium text-slate-700 truncate">{s.name}</span>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className="text-sm font-semibold text-slate-900 tabular-nums">{formatCurrency(s.total, "RON")}</span>
+                        <span className="text-xs text-slate-400 ml-1.5">{s.count}×</span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-violet-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Top Clients */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Users size={15} className="text-slate-500" />
+            <h2 className="text-sm font-semibold text-slate-800">Top clienți</h2>
+          </div>
+          {topClients.length === 0 ? (
+            <p className="text-sm text-slate-400 py-4 text-center">Nicio factură emisă încă</p>
+          ) : (
+            <div className="space-y-3">
+              {topClients.map((c, i) => {
+                const pct = totalBilled > 0 ? (c.total / totalBilled) * 100 : 0;
+                return (
+                  <div key={i}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs text-slate-400 w-4 shrink-0">{i + 1}.</span>
+                        <span className="text-sm font-medium text-slate-700 truncate">{c.name}</span>
+                        <span className="text-xs text-slate-400 shrink-0">{c.count} fact.</span>
+                      </div>
+                      <div className="text-right shrink-0 ml-3">
+                        <span className="text-sm font-semibold text-slate-900 tabular-nums">{formatCurrency(c.total, "RON")}</span>
+                        <span className="text-xs text-slate-400 ml-1.5">{pct.toFixed(0)}%</span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Revenue chart ── */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-800">Venituri încasate</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Ultimele 12 luni (RON)</p>
+          </div>
+          <div className="text-right">
+            <div className="text-lg font-bold text-slate-900 tabular-nums">{formatCurrency(collectedThisMonth, "RON")}</div>
+            <div className="text-xs text-slate-400">luna curentă</div>
+          </div>
+        </div>
+        <RevenueChart data={chartData} currency="RON" />
+      </div>
+
+      {/* ── Year-over-year — HIDDEN ── */}
+      {false && (thisYearRev > 0 || lastYearRev > 0) && (
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">{lastYear}</p>
+            <p className="text-2xl font-bold text-slate-700 tabular-nums">{formatCurrency(Math.round(lastYearRev), "RON")}</p>
+            <p className="text-xs text-slate-400 mt-1">{lastYearInvoices} facturi emise</p>
+          </div>
+          <div className="bg-white rounded-xl border border-blue-100 p-5">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">{thisYear}</p>
+            <p className="text-2xl font-bold text-slate-900 tabular-nums">{formatCurrency(Math.round(thisYearRev), "RON")}</p>
+            <p className="text-xs text-slate-400 mt-1">{thisYearInvoices} facturi emise</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-center">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Creștere an/an</p>
+            {yoyPct === null ? (
+              <p className="text-sm text-slate-400">Date insuficiente</p>
+            ) : (
+              <p className={`text-3xl font-bold tabular-nums ${yoyPct > 0 ? "text-green-600" : yoyPct < 0 ? "text-red-500" : "text-slate-400"}`}>
+                {yoyPct > 0 ? "+" : ""}{yoyPct.toFixed(1)}%
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Currency breakdown ── */}
+      {currencyRows.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <h2 className="text-sm font-semibold text-slate-800 mb-5">Structură pe monede</h2>
+          <div className="grid grid-cols-3 gap-6">
+            {currencyRows.map((r) => {
+              const pct = (r.totalRon / currencyMax) * 100;
+              return (
+                <div key={r.cur}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-700 w-10">{r.cur}</span>
+                      <span className="text-xs text-slate-400">{r.count} facturi</span>
+                    </div>
+                    <span className="text-sm font-semibold text-slate-900 tabular-nums">{formatCurrency(Math.round(r.totalRon), "RON")}</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
@@ -999,6 +992,91 @@ export default async function AnalyticsPage() {
           )}
         </div>
       </div>
+
+      {/* ── Avg invoice value trend + Pareto concentration ── */}
+      {billed.length > 0 && (
+        <div className="grid grid-cols-2 gap-6">
+
+          {/* Avg invoice value trend */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <h2 className="text-sm font-semibold text-slate-800 mb-1">Valoare medie factură</h2>
+            <p className="text-xs text-slate-400 mb-5">Evoluție lunară (RON, facturi plătite)</p>
+            {avgValueByMonth.every((r) => r.avg === 0) ? (
+              <p className="text-sm text-slate-400 py-4 text-center">Fără date</p>
+            ) : (() => {
+              const maxAvg = Math.max(...avgValueByMonth.map((r) => r.avg), 1);
+              return (
+                <div className="space-y-2">
+                  {avgValueByMonth.filter((r) => r.avg > 0 || r.isCurrent).map((r, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <span className={`text-xs w-8 shrink-0 ${r.isCurrent ? "text-blue-600 font-semibold" : "text-slate-400"}`}>
+                        {r.month}
+                      </span>
+                      <div className="flex-1 h-5 bg-slate-100 rounded overflow-hidden">
+                        {r.avg > 0 && (
+                          <div
+                            className={`h-full rounded transition-all flex items-center justify-end pr-2 ${r.isCurrent ? "bg-blue-500" : "bg-slate-300"}`}
+                            style={{ width: `${(r.avg / maxAvg) * 100}%` }}
+                          >
+                            <span className="text-xs text-white font-medium tabular-nums whitespace-nowrap">
+                              {formatCurrency(r.avg, "RON")}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-xs text-slate-400 w-4 shrink-0 text-right">{r.count > 0 ? r.count : ""}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Pareto concentration */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <h2 className="text-sm font-semibold text-slate-800 mb-1">Concentrare venituri (Pareto)</h2>
+            <p className="text-xs text-slate-400 mb-4">
+              {paretoRows.length > 0
+                ? `Top ${top80Count} din ${paretoRows.length} clienți → 80% din venituri`
+                : "Fără date"}
+            </p>
+            {paretoRows.length === 0 ? (
+              <p className="text-sm text-slate-400 py-4 text-center">Fără date</p>
+            ) : (
+              <div className="space-y-2">
+                {paretoRows.slice(0, 10).map((r) => {
+                  const is80 = r.rank === top80Count;
+                  return (
+                    <div key={r.rank}>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-xs text-slate-400 w-4 shrink-0">{r.rank}.</span>
+                        <span className="text-xs font-medium text-slate-700 flex-1 truncate">{r.name}</span>
+                        <span className="text-xs text-slate-500 tabular-nums">{r.ownPct.toFixed(1)}%</span>
+                        <span className={`text-xs font-semibold tabular-nums w-12 text-right ${r.cumulativePct >= 80 ? "text-slate-400" : "text-blue-600"}`}>
+                          {r.cumulativePct.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 ml-6">
+                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${r.cumulativePct > 80 ? "bg-slate-300" : "bg-blue-500"}`}
+                            style={{ width: `${r.cumulativePct}%` }}
+                          />
+                        </div>
+                      </div>
+                      {is80 && paretoRows.length > top80Count && (
+                        <div className="ml-6 mt-1 mb-1 border-t border-dashed border-amber-300 text-xs text-amber-600 pt-1">
+                          ↑ 80% din venituri
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Monthly breakdown table ── */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
