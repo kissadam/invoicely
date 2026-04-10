@@ -10,7 +10,7 @@ import { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, RefreshCw, FileDown, Loader2, AlertTriangle, Pencil } from "lucide-react";
+import { Plus, RefreshCw, FileDown, Loader2, AlertTriangle, Pencil, Sparkles, X } from "lucide-react";
 import { computeInvoice } from "@/lib/calculations";
 import { formatExchangeRateLine } from "@/lib/bnr";
 import type { InvoiceItemForm } from "@/types/invoice";
@@ -122,6 +122,27 @@ export default function InvoiceEditor({
   );
 
   const [saving, setSaving] = useState(false);
+
+  // Suggestions — only in create mode, fetched when client is picked
+  type Suggestion = { position: number; name: string; unit: string; quantity: number; priceEur: number; subtotalEur: number; subtotalRon: number; usedCount: number };
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [suggestionsVisible, setSuggestionsVisible] = useState(false);
+
+  useEffect(() => {
+    if (isEdit || !client?.id) { setSuggestions([]); setSuggestionsVisible(false); return; }
+    fetch(`/api/invoices/suggestions?clientId=${client.id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.suggestions?.length > 0) {
+          setSuggestions(data.suggestions);
+          setSuggestionsVisible(true);
+        } else {
+          setSuggestions([]);
+          setSuggestionsVisible(false);
+        }
+      })
+      .catch(() => {});
+  }, [client?.id, isEdit]);
 
   // Dirty tracking & exit confirmation — only for create mode
   const [isDirty, setIsDirty] = useState(false);
@@ -291,6 +312,17 @@ export default function InvoiceEditor({
     }
   }
 
+  function applySuggestions() {
+    const withTotals = suggestions.map((s) => ({
+      ...s,
+      subtotalEur: Math.round(s.quantity * s.priceEur * 100) / 100,
+      subtotalRon: Math.round(s.quantity * s.priceEur * exchangeRate * 100) / 100,
+    }));
+    setItems(withTotals);
+    setSuggestionsVisible(false);
+    toast.success("Articolele au fost completate din factura anterioară");
+  }
+
   const exchangeLine =
     needsRate && exchangeRate > 0 && rateDate
       ? formatExchangeRateLine(exchangeRate, currency, rateDate)
@@ -323,6 +355,24 @@ export default function InvoiceEditor({
             <Link href="/companies" className="font-semibold underline hover:text-amber-900">Adaugă acum</Link>{" "}
             pentru a putea genera facturi.
           </span>
+        </div>
+      )}
+
+      {suggestionsVisible && suggestions.length > 0 && (
+        <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 text-sm text-blue-800">
+          <Sparkles size={16} className="shrink-0 text-blue-500" />
+          <span className="flex-1">
+            <span className="font-semibold">{suggestions.length} articole</span> din factura anterioară pentru {client?.name} — vrei să le precompletezi?
+          </span>
+          <button
+            onClick={applySuggestions}
+            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
+          >
+            Aplică
+          </button>
+          <button onClick={() => setSuggestionsVisible(false)} className="text-blue-400 hover:text-blue-600 transition-colors">
+            <X size={16} />
+          </button>
         </div>
       )}
 

@@ -407,8 +407,6 @@ export default async function AnalyticsPage() {
   // Overdue alert
   if (overdue.length > 0) {
     insights.push({ icon: "⚠️", text: `${overdue.length} ${overdue.length === 1 ? "factură restantă" : "facturi restante"} în valoare de ${formatCurrency(totalOverdue, "RON")}`, color: "red" });
-  } else if (billed.length > 0) {
-    insights.push({ icon: "✅", text: "Toate facturile sunt încasate la termen", color: "green" });
   }
 
   // Top client
@@ -417,16 +415,12 @@ export default async function AnalyticsPage() {
     const pct = totalBilled > 0 ? (top.total / totalBilled) * 100 : 0;
     if (pct >= 50) {
       insights.push({ icon: "🎯", text: `${top.name} reprezintă ${pct.toFixed(0)}% din venituri — risc de concentrare`, color: "amber" });
-    } else {
-      insights.push({ icon: "🏆", text: `Cel mai valoros client: ${top.name} (${formatCurrency(top.total, "RON")})`, color: "blue" });
     }
   }
 
   // DSO insight
   if (dso !== null) {
-    if (dso <= 14) {
-      insights.push({ icon: "⚡", text: `Timp mediu de încasare excelent: ${dso} zile`, color: "green" });
-    } else if (dso >= 45) {
+    if (dso >= 45) {
       insights.push({ icon: "🐢", text: `Timp mediu de încasare ridicat: ${dso} zile — urmăriți clienții`, color: "amber" });
     }
   }
