@@ -92,4 +92,7 @@ export interface BnrRateResponse {
 export interface InvoiceTotals {
   totalEur: number;
   totalRon: number;
+  vatRate: number;        // 0 = no VAT
+  vatAmountRon: number;
+  totalWithVatRon: number;
 }

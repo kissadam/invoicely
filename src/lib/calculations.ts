@@ -26,7 +26,8 @@ export function computeItem(
  */
 export function computeInvoice(
   items: InvoiceItemForm[],
-  exchangeRate: number
+  exchangeRate: number,
+  vatRate = 0,
 ): { items: InvoiceItemForm[]; totals: InvoiceTotals } {
   let totalEur = 0;
   let totalRon = 0;
@@ -38,11 +39,19 @@ export function computeInvoice(
     return { ...item, subtotalEur, subtotalRon };
   });
 
+  const tEur = round2(totalEur);
+  const tRon = round2(totalRon);
+  const vatAmountRon = round2(tRon * vatRate / 100);
+  const totalWithVatRon = round2(tRon + vatAmountRon);
+
   return {
     items: computed,
     totals: {
-      totalEur: round2(totalEur),
-      totalRon: round2(totalRon),
+      totalEur: tEur,
+      totalRon: tRon,
+      vatRate,
+      vatAmountRon,
+      totalWithVatRon,
     },
   };
 }

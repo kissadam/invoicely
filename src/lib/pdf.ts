@@ -14,6 +14,9 @@ type FullInvoice = Invoice & {
   client: Client;
   company: Company | null;
   template?: { config: unknown } | null;
+  vatRate?: unknown;
+  vatAmountRon?: unknown;
+  totalWithVatRon?: unknown;
 };
 
 function formatDate(d: Date | string | null): string {
@@ -55,8 +58,12 @@ export function buildInvoiceHtml(invoice: FullInvoice): string {
     })
     .join("");
 
-  const supplierCui = invoice.company?.cui ?? "";
-  const clientCui = invoice.client.cui ?? "";
+  const supplierCui = invoice.company
+    ? (invoice.company.vatPayer ? `RO${invoice.company.cui.replace(/^RO/i, "")}` : invoice.company.cui)
+    : "";
+  const clientCui = invoice.client.cui
+    ? (invoice.client.vatPayer ? `RO${invoice.client.cui.replace(/^RO/i, "")}` : invoice.client.cui)
+    : "";
   const vatLabel = invoice.client.vatPayer ? "(Plătitor TVA)" : "(Neplătitor TVA)";
   const footerNote = invoice.footerText ?? config.footerText;
 
@@ -129,11 +136,19 @@ export function buildInvoiceHtml(invoice: FullInvoice): string {
       ${invoice.dueDate ? `<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;font-weight:600">Termen de plată</div><div style="font-weight:600;color:#0f172a;margin-top:3px">${formatDate(invoice.dueDate)}</div></div>` : ""}
     </div>
     <div style="min-width:260px">
+      ${invoiceCurrency !== "RON" ? `
       <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;color:#475569;border-bottom:1px solid #f1f5f9">
-        <span>Total EUR</span><span style="font-weight:500">${formatCurrency(Number(invoice.totalEur), "EUR")}</span>
+        <span>Total ${invoiceCurrency}</span><span style="font-weight:500">${formatCurrency(Number(invoice.totalEur), invoiceCurrency)}</span>
+      </div>` : ""}
+      <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;color:#475569;border-bottom:1px solid #f1f5f9">
+        <span>Total fără TVA</span><span style="font-weight:500">${formatCurrency(Number(invoice.totalRon), "RON")}</span>
       </div>
+      ${invoice.vatRate ? `
+      <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;color:#475569;border-bottom:1px solid #f1f5f9">
+        <span>TVA ${Number(invoice.vatRate)}%</span><span style="font-weight:500">${formatCurrency(Number(invoice.vatAmountRon), "RON")}</span>
+      </div>` : ""}
       <div style="display:flex;justify-content:space-between;padding:10px 0 0;font-size:15px;font-weight:700;color:#0f172a">
-        <span>Total de plată</span><span>${formatCurrency(Number(invoice.totalRon), "RON")}</span>
+        <span>Total de plată</span><span>${formatCurrency(Number(invoice.vatRate ? invoice.totalWithVatRon : invoice.totalRon), "RON")}</span>
       </div>
     </div>
   </div>

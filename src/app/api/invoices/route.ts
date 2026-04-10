@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
     dueDate?: string;
     shipDate?: string;
     exchangeRate: number;
+    vatRate?: number;
     notes?: string;
     footerText?: string;
     items: InvoiceItemForm[];
@@ -79,24 +80,28 @@ export async function POST(req: NextRequest) {
     number = generateInvoiceNumber(year, count + 1);
   }
 
-  const { items: computedItems, totals } = computeInvoice(body.items, body.exchangeRate);
+  const vatRate = body.vatRate ?? 0;
+  const { items: computedItems, totals } = computeInvoice(body.items, body.exchangeRate, vatRate);
 
   const invoice = await prisma.invoice.create({
     data: {
       number,
       userId,
-      clientId:   body.clientId,
-      companyId:  body.companyId,
-      templateId: body.templateId,
-      currency:   body.currency ?? "RON",
-      issueDate:  body.issueDate ? new Date(body.issueDate) : new Date(),
-      dueDate:    body.dueDate   ? new Date(body.dueDate)   : null,
-      shipDate:   body.shipDate  ? new Date(body.shipDate)  : null,
-      exchangeRate: body.exchangeRate,
-      totalEur:   totals.totalEur,
-      totalRon:   totals.totalRon,
-      notes:      body.notes,
-      footerText: body.footerText,
+      clientId:       body.clientId,
+      companyId:      body.companyId,
+      templateId:     body.templateId,
+      currency:       body.currency ?? "RON",
+      issueDate:      body.issueDate ? new Date(body.issueDate) : new Date(),
+      dueDate:        body.dueDate   ? new Date(body.dueDate)   : null,
+      shipDate:       body.shipDate  ? new Date(body.shipDate)  : null,
+      exchangeRate:   body.exchangeRate,
+      totalEur:       totals.totalEur,
+      totalRon:       totals.totalRon,
+      vatRate:        vatRate > 0 ? vatRate : null,
+      vatAmountRon:   vatRate > 0 ? totals.vatAmountRon   : null,
+      totalWithVatRon: vatRate > 0 ? totals.totalWithVatRon : null,
+      notes:          body.notes,
+      footerText:     body.footerText,
       items: {
         create: computedItems.map((item) => ({
           position:    item.position,
