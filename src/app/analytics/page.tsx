@@ -148,6 +148,41 @@ export default async function AnalyticsPage() {
     .slice(0, 8);
   const serviceMaxTotal = topServices[0]?.total ?? 1;
 
+  // ── Monthly breakdown table ──────────────────────────────────────────────
+
+  // Count billed (SENT+PAID) invoices issued in each of the 12 months
+  const issuedCountByMonth: Record<string, number> = {};
+  const paidCountByMonth:   Record<string, number> = {};
+  for (const mk of months12) { issuedCountByMonth[mk] = 0; paidCountByMonth[mk] = 0; }
+  for (const inv of billed) {
+    const mk = monthKey(new Date(inv.issueDate));
+    if (mk in issuedCountByMonth) issuedCountByMonth[mk]++;
+  }
+  for (const inv of paid) {
+    const mk = monthKey(new Date(inv.issueDate));
+    if (mk in paidCountByMonth) paidCountByMonth[mk]++;
+  }
+
+  const monthlyRows = months12.map((mk, idx) => {
+    const revenue    = revenueByMonth[mk] ?? 0;
+    const prevRev    = idx > 0 ? (revenueByMonth[months12[idx - 1]] ?? 0) : null;
+    const mom        = prevRev !== null && prevRev > 0 ? ((revenue - prevRev) / prevRev) * 100 : null;
+    const issued     = issuedCountByMonth[mk] ?? 0;
+    const paidCount  = paidCountByMonth[mk] ?? 0;
+    const avgInvoice = paidCount > 0 ? revenue / paidCount : 0;
+    const [year, month] = mk.split("-");
+    return {
+      label:  `${RO_MONTHS[parseInt(month) - 1]} ${year}`,
+      mk,
+      revenue: Math.round(revenue),
+      issued,
+      paidCount,
+      avgInvoice: Math.round(avgInvoice),
+      mom,
+      isCurrent: mk === thisMonthKey,
+    };
+  }).reverse(); // most recent first
+
   // ── Overdue aging ─────────────────────────────────────────────────────────
 
   const aging = { d30: 0, d60: 0, d90: 0, d90plus: 0 };
@@ -443,6 +478,61 @@ export default async function AnalyticsPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── Monthly breakdown table ── */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100">
+          <h2 className="text-sm font-semibold text-slate-800">Detaliu lunar — ultimele 12 luni</h2>
+        </div>
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 border-b border-slate-100">
+            <tr className="text-xs text-slate-500 uppercase tracking-wide">
+              <th className="px-6 py-3 text-left font-semibold">Lună</th>
+              <th className="px-6 py-3 text-right font-semibold">Facturi emise</th>
+              <th className="px-6 py-3 text-right font-semibold">Facturi plătite</th>
+              <th className="px-6 py-3 text-right font-semibold">Încasat (RON)</th>
+              <th className="px-6 py-3 text-right font-semibold">Val. medie factură</th>
+              <th className="px-6 py-3 text-right font-semibold">vs. luna anterioară</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {monthlyRows.map((row) => (
+              <tr
+                key={row.mk}
+                className={row.isCurrent ? "bg-blue-50/50" : "hover:bg-slate-50/50"}
+              >
+                <td className="px-6 py-3 font-medium text-slate-700">
+                  {row.label}
+                  {row.isCurrent && <span className="ml-2 text-xs text-blue-500 font-normal">curentă</span>}
+                </td>
+                <td className="px-6 py-3 text-right text-slate-500 tabular-nums">
+                  {row.issued > 0 ? row.issued : <span className="text-slate-300">—</span>}
+                </td>
+                <td className="px-6 py-3 text-right text-slate-500 tabular-nums">
+                  {row.paidCount > 0 ? row.paidCount : <span className="text-slate-300">—</span>}
+                </td>
+                <td className="px-6 py-3 text-right font-semibold text-slate-900 tabular-nums">
+                  {row.revenue > 0 ? formatCurrency(row.revenue, "RON") : <span className="font-normal text-slate-300">—</span>}
+                </td>
+                <td className="px-6 py-3 text-right text-slate-500 tabular-nums">
+                  {row.avgInvoice > 0 ? formatCurrency(row.avgInvoice, "RON") : <span className="text-slate-300">—</span>}
+                </td>
+                <td className="px-6 py-3 text-right tabular-nums">
+                  {row.mom === null ? (
+                    <span className="text-slate-300">—</span>
+                  ) : row.mom > 3 ? (
+                    <span className="text-green-600 font-medium">+{row.mom.toFixed(0)}%</span>
+                  ) : row.mom < -3 ? (
+                    <span className="text-red-500 font-medium">{row.mom.toFixed(0)}%</span>
+                  ) : (
+                    <span className="text-slate-400">~0%</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
     </div>
