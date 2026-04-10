@@ -709,11 +709,11 @@ export default async function AnalyticsPage() {
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Creștere an/an</p>
             {yoyPct === null ? (
               <p className="text-sm text-slate-400">Date insuficiente</p>
-            ) : (
-              <p className={`text-3xl font-bold tabular-nums ${yoyPct > 0 ? "text-green-600" : yoyPct < 0 ? "text-red-500" : "text-slate-400"}`}>
-                {yoyPct > 0 ? "+" : ""}{yoyPct.toFixed(1)}%
+            ) : (() => { const pct = yoyPct!; return (
+              <p className={`text-3xl font-bold tabular-nums ${pct > 0 ? "text-green-600" : pct < 0 ? "text-red-500" : "text-slate-400"}`}>
+                {pct > 0 ? "+" : ""}{pct.toFixed(1)}%
               </p>
-            )}
+            ); })()}
           </div>
         </div>
       )}
