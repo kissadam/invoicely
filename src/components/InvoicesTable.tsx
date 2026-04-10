@@ -14,7 +14,7 @@ interface Invoice {
   totalEur: unknown;
   totalRon: unknown;
   status: string;
-  client: { name: string; cui: string | null };
+  client: { name: string; cui: string | null; vatPayer: boolean };
 }
 
 const STATUS_STYLES: Record<string, string> = {
