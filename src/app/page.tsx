@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Plus, TrendingUp, FileText, Users, Clock } from "lucide-react";
 import { formatCurrency } from "@/lib/calculations";
 import { requirePageSession } from "@/lib/session";
@@ -46,6 +47,10 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default async function DashboardPage() {
   const userId = await requirePageSession();
+
+  const company = await prisma.company.findFirst({ where: { userId } });
+  if (!company) redirect("/onboarding");
+
   const [stats, recent] = await Promise.all([getStats(userId), getRecentInvoices(userId)]);
 
   const totalRon = Number(stats.total._sum.totalRon ?? 0);
