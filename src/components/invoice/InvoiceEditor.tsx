@@ -61,8 +61,8 @@ export default function InvoiceEditor() {
   // Client
   const [client, setClient] = useState<SelectedClient | null>(null);
 
-  // VAT — enabled when client is VAT payer; always 21% (editable via company settings)
-  const vatEnabled = !!client?.vatPayer;
+  // VAT — driven by MY company being a VAT payer, always 21%
+  const vatEnabled = !!company?.vatPayer;
   const vatRate = 21;
 
   // Currency — selected on the invoice, persisted in localStorage

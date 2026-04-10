@@ -39,6 +39,7 @@ export default function InvoicePreview({
   issueDate, dueDate, shipDate, footerText, invoiceNumber = "INV-DRAFT",
 }: Props) {
   const needsRate = currency !== "RON";
+  const vatEnabled = !!company?.vatPayer;
   const validItems = items.filter((i) => i.name.trim());
   const exchangeLine = needsRate && exchangeRate > 0 && rateDate ? formatExchangeRateLine(exchangeRate, currency, rateDate) : "";
   const accent = "#2563eb";
@@ -164,9 +165,21 @@ export default function InvoicePreview({
                 <span style={{ fontWeight: 500 }}>{formatCurrency(totals.totalEur, currency)}</span>
               </div>
             )}
+            {vatEnabled && (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 12, color: "#475569", borderBottom: "1px solid #f1f5f9" }}>
+                  <span>Total fără TVA</span>
+                  <span style={{ fontWeight: 500 }}>{formatCurrency(needsRate ? totals.totalRon : totals.totalEur, "RON")}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 12, color: "#d97706", borderBottom: "1px solid #f1f5f9" }}>
+                  <span>TVA {totals.vatRate}%</span>
+                  <span style={{ fontWeight: 500 }}>{formatCurrency(totals.vatAmountRon, "RON")}</span>
+                </div>
+              </>
+            )}
             <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0 0", fontSize: 15, fontWeight: 700, color: "#0f172a" }}>
-              <span>Total de plată</span>
-              <span>{formatCurrency(needsRate ? totals.totalRon : totals.totalEur, "RON")}</span>
+              <span>{vatEnabled ? "Total cu TVA" : "Total de plată (TVA inclus)"}</span>
+              <span>{formatCurrency(vatEnabled ? totals.totalWithVatRon : (needsRate ? totals.totalRon : totals.totalEur), "RON")}</span>
             </div>
           </div>
         </div>
