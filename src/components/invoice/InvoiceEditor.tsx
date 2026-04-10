@@ -376,11 +376,11 @@ export default function InvoiceEditor() {
               <span>Denumire serviciu</span>
               <span className="text-center">U.M.</span>
               <span className="text-right">Cantitate</span>
-              <span className="text-right">Preț {currency}</span>
-              <span className="text-right">Subtotal {currency}</span>
-              {needsRate && <span className="text-right">Subtotal RON</span>}
-              {vatEnabled && <span className="text-right">TVA {vatRate}%</span>}
-              {vatEnabled && <span className="text-right">Total+TVA</span>}
+              <span className="text-right leading-tight">Preț<br/><span className="normal-case font-normal">{currency}</span></span>
+              <span className="text-right leading-tight">Subtotal<br/><span className="normal-case font-normal">{currency}</span></span>
+              {needsRate && <span className="text-right leading-tight">Subtotal<br/><span className="normal-case font-normal">RON</span></span>}
+              {vatEnabled && <span className="text-right leading-tight">TVA<br/><span className="normal-case font-normal">{vatRate}%</span></span>}
+              {vatEnabled && <span className="text-right leading-tight">Total<br/><span className="normal-case font-normal">TVA inclus</span></span>}
               <span />
             </div>
 
