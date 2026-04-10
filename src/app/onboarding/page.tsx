@@ -28,8 +28,8 @@ export default function OnboardingPage() {
     setCuiLoading(true);
     try {
       const res = await fetch(`/api/anaf?cui=${cui}`);
-      if (!res.ok) throw new Error("Nu s-au găsit date pentru acest CUI");
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Nu s-au găsit date pentru acest CUI");
       setForm((f) => ({
         ...f,
         name: data.name ?? f.name,
