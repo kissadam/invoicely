@@ -98,6 +98,12 @@ export default async function AnalyticsPage() {
     isCurrent: mk === thisMonthKey,
   }));
 
+  // last3Keys / last3Avg used by both Run rate and Forecast — declare once here
+  const last3Keys = months12.slice(-4, -1); // last 3 completed months
+  const last3Avg  = last3Keys.length > 0
+    ? last3Keys.reduce((s, mk) => s + (revenueByMonth[mk] ?? 0), 0) / last3Keys.length
+    : 0;
+
   // ── Top clients ───────────────────────────────────────────────────────────
 
   const clientMap: Record<string, { name: string; total: number; count: number }> = {};
@@ -195,17 +201,163 @@ export default async function AnalyticsPage() {
     else                 aging.d90plus += amt;
   }
 
+  // ── Year-over-year ────────────────────────────────────────────────────────
+
+  const thisYear = now.getFullYear();
+  const lastYear = thisYear - 1;
+  const thisYearRev = paid.filter((i) => new Date(i.issueDate).getFullYear() === thisYear).reduce((s, i) => s + effectiveTotal(i), 0);
+  const lastYearRev = paid.filter((i) => new Date(i.issueDate).getFullYear() === lastYear).reduce((s, i) => s + effectiveTotal(i), 0);
+  const yoyPct = lastYearRev > 0 ? ((thisYearRev - lastYearRev) / lastYearRev) * 100 : null;
+  const thisYearInvoices = billed.filter((i) => new Date(i.issueDate).getFullYear() === thisYear).length;
+  const lastYearInvoices = billed.filter((i) => new Date(i.issueDate).getFullYear() === lastYear).length;
+
+  // ── Currency breakdown ────────────────────────────────────────────────────
+
+  const currencyMap: Record<string, { count: number; totalRon: number }> = {};
+  for (const inv of billed) {
+    const cur = (inv as { currency: string }).currency;
+    if (!currencyMap[cur]) currencyMap[cur] = { count: 0, totalRon: 0 };
+    currencyMap[cur].count++;
+    currencyMap[cur].totalRon += effectiveTotal(inv);
+  }
+  const currencyRows = Object.entries(currencyMap)
+    .map(([cur, v]) => ({ cur, ...v }))
+    .sort((a, b) => b.totalRon - a.totalRon);
+  const currencyMax = currencyRows[0]?.totalRon ?? 1;
+
+  // ── Invoice size distribution ─────────────────────────────────────────────
+
+  const sizeBuckets = [
+    { label: "Micro  < 500 RON",      min: 0,    max: 500,   count: 0 },
+    { label: "Mică   500–2 000 RON",  min: 500,  max: 2000,  count: 0 },
+    { label: "Medie  2 000–10 000",   min: 2000, max: 10000, count: 0 },
+    { label: "Mare   > 10 000 RON",   min: 10000,max: Infinity, count: 0 },
+  ];
+  for (const inv of billed) {
+    const total = effectiveTotal(inv);
+    const bucket = sizeBuckets.find((b) => total >= b.min && total < b.max);
+    if (bucket) bucket.count++;
+  }
+  const sizeTotal = billed.length || 1;
+
+  // ── Client payment behavior ───────────────────────────────────────────────
+
+  const clientPayMap: Record<string, { name: string; dsoSum: number; count: number; lastDate: Date }> = {};
+  for (const inv of paid) {
+    const id   = inv.client.id;
+    const days = Math.max(0, (new Date(inv.updatedAt).getTime() - new Date(inv.issueDate).getTime()) / 86_400_000);
+    if (!clientPayMap[id]) clientPayMap[id] = { name: inv.client.name, dsoSum: 0, count: 0, lastDate: new Date(inv.issueDate) };
+    clientPayMap[id].dsoSum += days;
+    clientPayMap[id].count++;
+    if (new Date(inv.issueDate) > clientPayMap[id].lastDate) clientPayMap[id].lastDate = new Date(inv.issueDate);
+  }
+  const clientPayRows = Object.values(clientPayMap)
+    .map((c) => ({ ...c, avgDso: Math.round(c.dsoSum / c.count) }))
+    .sort((a, b) => b.avgDso - a.avgDso)
+    .slice(0, 10);
+  const maxDso = clientPayRows[0]?.avgDso ?? 1;
+
+  // ── Overdue invoice details ───────────────────────────────────────────────
+
+  const overdueDetails = overdue
+    .map((inv) => ({
+      id:       inv.id,
+      number:   (inv as { number: string }).number,
+      client:   inv.client.name,
+      amount:   effectiveTotal(inv),
+      daysOver: Math.floor((now.getTime() - new Date(inv.dueDate!).getTime()) / 86_400_000),
+      dueDate:  inv.dueDate!,
+    }))
+    .sort((a, b) => b.daysOver - a.daysOver);
+
+  // ── New vs returning clients (last 6 months) ──────────────────────────────
+
+  // First invoice date per client across all time
+  const clientFirstSeen: Record<string, string> = {};
+  for (const inv of invoices) {
+    const id = inv.client.id;
+    const mk = monthKey(new Date(inv.issueDate));
+    if (!clientFirstSeen[id] || mk < clientFirstSeen[id]) clientFirstSeen[id] = mk;
+  }
+
+  const months6 = months12.slice(-6);
+  const clientAcqRows = months6.map((mk) => {
+    const monthInvs = billed.filter((i) => monthKey(new Date(i.issueDate)) === mk);
+    const seen = new Set<string>();
+    let newClients = 0, returningClients = 0;
+    for (const inv of monthInvs) {
+      if (seen.has(inv.client.id)) continue;
+      seen.add(inv.client.id);
+      if (clientFirstSeen[inv.client.id] === mk) newClients++;
+      else returningClients++;
+    }
+    const [year, month] = mk.split("-");
+    return { label: `${RO_MONTHS[parseInt(month) - 1]} ${year}`, mk, newClients, returningClients, total: newClients + returningClients, isCurrent: mk === thisMonthKey };
+  });
+  const maxAcqTotal = Math.max(...clientAcqRows.map((r) => r.total), 1);
+
+  // ── Revenue heatmap (all-time by year × month) ────────────────────────────
+
+  const heatYears = Array.from(new Set(paid.map((i) => new Date(i.issueDate).getFullYear()))).sort();
+  const heatData: Record<number, Record<number, number>> = {};
+  for (const y of heatYears) heatData[y] = {};
+  for (const inv of paid) {
+    const d = new Date(inv.issueDate);
+    const y = d.getFullYear(), m = d.getMonth(); // 0-indexed
+    heatData[y][m] = (heatData[y][m] ?? 0) + effectiveTotal(inv);
+  }
+  const heatMax = Math.max(...Object.values(heatData).flatMap((ym) => Object.values(ym)), 1);
+
+  // ── Run rate ──────────────────────────────────────────────────────────────
+
+  // Annualized run rate = last 3 completed months avg × 12
+  const runRate = Math.round(last3Avg * 12);
+  // Quarterly run rate = last 3 completed months total
+  const quarterlyRate = Math.round(last3Keys.reduce((s, mk) => s + (revenueByMonth[mk] ?? 0), 0));
+  // All-time best month
+  const bestMonthEntry = Object.entries(revenueByMonth).reduce<[string, number] | null>(
+    (best, [mk, val]) => (best === null || val > best[1] ? [mk, val] : best),
+    null,
+  );
+  const bestMonthLabel = bestMonthEntry
+    ? `${RO_MONTHS[parseInt(bestMonthEntry[0].split("-")[1]) - 1]} ${bestMonthEntry[0].split("-")[0]}`
+    : null;
+
+  // ── At-risk clients (no invoice in 60+ days) ──────────────────────────────
+
+  const clientLastSeen: Record<string, { name: string; lastDate: Date; totalRev: number }> = {};
+  for (const inv of billed) {
+    const id = inv.client.id;
+    const d  = new Date(inv.issueDate);
+    if (!clientLastSeen[id]) clientLastSeen[id] = { name: inv.client.name, lastDate: d, totalRev: 0 };
+    if (d > clientLastSeen[id].lastDate) clientLastSeen[id].lastDate = d;
+    clientLastSeen[id].totalRev += effectiveTotal(inv);
+  }
+  const atRiskClients = Object.values(clientLastSeen)
+    .map((c) => ({ ...c, daysSince: Math.floor((now.getTime() - c.lastDate.getTime()) / 86_400_000) }))
+    .filter((c) => c.daysSince >= 60)
+    .sort((a, b) => b.totalRev - a.totalRev);
+
+  // ── Payment punctuality ───────────────────────────────────────────────────
+
+  const paidWithDue = paid.filter((i) => i.dueDate);
+  let onTime = 0, late = 0, daysEarlySum = 0, daysLateSum = 0;
+  for (const inv of paidWithDue) {
+    const diff = Math.round((new Date(inv.dueDate!).getTime() - new Date(inv.updatedAt).getTime()) / 86_400_000);
+    if (diff >= 0) { onTime++; daysEarlySum += diff; }
+    else           { late++;  daysLateSum  += Math.abs(diff); }
+  }
+  const punctualityTotal = paidWithDue.length || 1;
+  const onTimePct  = Math.round((onTime / punctualityTotal) * 100);
+  const latePct    = Math.round((late   / punctualityTotal) * 100);
+  const avgEarly   = onTime > 0 ? Math.round(daysEarlySum / onTime) : 0;
+  const avgLateDays = late  > 0 ? Math.round(daysLateSum  / late)  : 0;
+
   // ── Forecast ─────────────────────────────────────────────────────────────
 
   // Pipeline: open (SENT, not yet overdue) invoices expected to come in
   const pipeline = invoices.filter((i) => i.status === "SENT" && (!i.dueDate || new Date(i.dueDate) >= now));
   const pipelineTotal = pipeline.reduce((s, i) => s + effectiveTotal(i), 0);
-
-  // 3-month average revenue (last 3 completed months)
-  const last3Keys = months12.slice(-4, -1); // exclude current month
-  const last3Avg = last3Keys.length > 0
-    ? last3Keys.reduce((s, mk) => s + (revenueByMonth[mk] ?? 0), 0) / last3Keys.length
-    : 0;
 
   // Projected total for current month = already collected + pipeline capped at avg
   const projectedThisMonth = Math.round(collectedThisMonth + Math.min(pipelineTotal, last3Avg * 1.5));
@@ -474,6 +626,374 @@ export default async function AnalyticsPage() {
               <div className="pt-3 border-t border-slate-100 flex justify-between text-sm font-semibold text-slate-800">
                 <span>Total restanțe</span>
                 <span className="tabular-nums text-red-600">{formatCurrency(totalOverdue, "RON")}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Year-over-year ── */}
+      {(thisYearRev > 0 || lastYearRev > 0) && (
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">{lastYear}</p>
+            <p className="text-2xl font-bold text-slate-700 tabular-nums">{formatCurrency(Math.round(lastYearRev), "RON")}</p>
+            <p className="text-xs text-slate-400 mt-1">{lastYearInvoices} facturi emise</p>
+          </div>
+          <div className="bg-white rounded-xl border border-blue-100 p-5">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">{thisYear}</p>
+            <p className="text-2xl font-bold text-slate-900 tabular-nums">{formatCurrency(Math.round(thisYearRev), "RON")}</p>
+            <p className="text-xs text-slate-400 mt-1">{thisYearInvoices} facturi emise</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-center">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Creștere an/an</p>
+            {yoyPct === null ? (
+              <p className="text-sm text-slate-400">Date insuficiente</p>
+            ) : (
+              <p className={`text-3xl font-bold tabular-nums ${yoyPct > 0 ? "text-green-600" : yoyPct < 0 ? "text-red-500" : "text-slate-400"}`}>
+                {yoyPct > 0 ? "+" : ""}{yoyPct.toFixed(1)}%
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Currency breakdown + Invoice size distribution ── */}
+      {billed.length > 0 && (
+        <div className="grid grid-cols-2 gap-6">
+
+          {/* Currency breakdown */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <h2 className="text-sm font-semibold text-slate-800 mb-5">Structură pe monede</h2>
+            {currencyRows.length === 0 ? (
+              <p className="text-sm text-slate-400">Fără date</p>
+            ) : (
+              <div className="space-y-4">
+                {currencyRows.map((r) => {
+                  const pct = (r.totalRon / currencyMax) * 100;
+                  return (
+                    <div key={r.cur}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-slate-700 w-10">{r.cur}</span>
+                          <span className="text-xs text-slate-400">{r.count} facturi</span>
+                        </div>
+                        <span className="text-sm font-semibold text-slate-900 tabular-nums">{formatCurrency(Math.round(r.totalRon), "RON")}</span>
+                      </div>
+                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Invoice size distribution */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <h2 className="text-sm font-semibold text-slate-800 mb-5">Distribuție valori facturi</h2>
+            <div className="space-y-4">
+              {sizeBuckets.map((b, i) => {
+                const pct = (b.count / sizeTotal) * 100;
+                const colors = ["bg-slate-300", "bg-blue-400", "bg-blue-600", "bg-violet-600"];
+                return (
+                  <div key={i}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs text-slate-600 font-medium">{b.label}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400">{b.count} fact.</span>
+                        <span className="text-xs font-semibold text-slate-700 w-10 text-right">{pct.toFixed(0)}%</span>
+                      </div>
+                    </div>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className={`h-full ${colors[i]} rounded-full`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Client payment behavior ── */}
+      {clientPayRows.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-800">Comportament de plată per client</h2>
+            <span className="text-xs text-slate-400">timp mediu de încasare (zile)</span>
+          </div>
+          <div className="divide-y divide-slate-50">
+            {clientPayRows.map((c, i) => {
+              const pct = (c.avgDso / maxDso) * 100;
+              const color = c.avgDso <= 14 ? "bg-green-400" : c.avgDso <= 30 ? "bg-blue-400" : c.avgDso <= 60 ? "bg-amber-400" : "bg-red-400";
+              const badge = c.avgDso <= 14 ? { label: "Rapid", cls: "bg-green-50 text-green-700" }
+                          : c.avgDso <= 30 ? { label: "Normal", cls: "bg-blue-50 text-blue-700" }
+                          : c.avgDso <= 60 ? { label: "Lent", cls: "bg-amber-50 text-amber-700" }
+                          : { label: "Problematic", cls: "bg-red-50 text-red-600" };
+              return (
+                <div key={i} className="px-6 py-3">
+                  <div className="flex items-center gap-4 mb-1.5">
+                    <span className="text-xs text-slate-400 w-4 shrink-0">{i + 1}.</span>
+                    <span className="text-sm font-medium text-slate-700 flex-1 truncate">{c.name}</span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                    <span className="text-sm font-bold text-slate-900 tabular-nums w-20 text-right">{c.avgDso} zile</span>
+                    <span className="text-xs text-slate-400 w-12 text-right shrink-0">{c.count} fact.</span>
+                  </div>
+                  <div className="ml-7 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className={`h-full ${color} rounded-full`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Overdue invoice details ── */}
+      {overdueDetails.length > 0 && (
+        <div className="bg-white rounded-xl border border-red-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-red-50 flex items-center gap-2">
+            <AlertTriangle size={14} className="text-red-500" />
+            <h2 className="text-sm font-semibold text-slate-800">Facturi restante — detaliu</h2>
+            <span className="ml-auto text-xs text-slate-400">{overdueDetails.length} {overdueDetails.length === 1 ? "factură" : "facturi"} neîncasate</span>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-red-50/50 border-b border-red-50">
+              <tr className="text-xs text-slate-500 uppercase tracking-wide">
+                <th className="px-6 py-3 text-left font-semibold">Factură</th>
+                <th className="px-6 py-3 text-left font-semibold">Client</th>
+                <th className="px-6 py-3 text-right font-semibold">Scadent</th>
+                <th className="px-6 py-3 text-right font-semibold">Zile restante</th>
+                <th className="px-6 py-3 text-right font-semibold">Valoare</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {overdueDetails.map((inv) => (
+                <tr key={inv.id} className="hover:bg-red-50/30">
+                  <td className="px-6 py-3 font-semibold text-blue-600">
+                    <a href={`/invoices/${inv.id}`} className="hover:underline">{inv.number}</a>
+                  </td>
+                  <td className="px-6 py-3 text-slate-700">{inv.client}</td>
+                  <td className="px-6 py-3 text-right text-slate-500">
+                    {new Date(inv.dueDate).toLocaleDateString("ro-RO", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                  </td>
+                  <td className="px-6 py-3 text-right">
+                    <span className={`font-semibold tabular-nums ${inv.daysOver > 60 ? "text-red-600" : inv.daysOver > 30 ? "text-orange-500" : "text-amber-500"}`}>
+                      {inv.daysOver} zile
+                    </span>
+                  </td>
+                  <td className="px-6 py-3 text-right font-bold text-slate-900 tabular-nums">
+                    {formatCurrency(Math.round(inv.amount), "RON")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── Run rate ── */}
+      {last3Avg > 0 && (
+        <div className="grid grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Run rate anual</p>
+            <p className="text-2xl font-bold text-slate-900 tabular-nums">{formatCurrency(runRate, "RON")}</p>
+            <p className="text-xs text-slate-400 mt-1">bazat pe ultimele 3 luni × 12</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Ultimul trimestru</p>
+            <p className="text-2xl font-bold text-slate-900 tabular-nums">{formatCurrency(quarterlyRate, "RON")}</p>
+            <p className="text-xs text-slate-400 mt-1">3 luni complete</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Medie lunară</p>
+            <p className="text-2xl font-bold text-slate-900 tabular-nums">{formatCurrency(Math.round(last3Avg), "RON")}</p>
+            <p className="text-xs text-slate-400 mt-1">ultimele 3 luni</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Cea mai bună lună</p>
+            <p className="text-2xl font-bold text-slate-900 tabular-nums">
+              {bestMonthEntry ? formatCurrency(Math.round(bestMonthEntry[1]), "RON") : "—"}
+            </p>
+            <p className="text-xs text-slate-400 mt-1">{bestMonthLabel ?? "—"}</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── At-risk clients + Payment punctuality ── */}
+      <div className="grid grid-cols-2 gap-6">
+
+        {/* At-risk clients */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <AlertTriangle size={15} className="text-amber-500" />
+            <h2 className="text-sm font-semibold text-slate-800">Clienți inactivi</h2>
+            <span className="text-xs text-slate-400 ml-auto">fără factură în 60+ zile</span>
+          </div>
+          {atRiskClients.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-6 gap-2">
+              <CheckCircle2 size={24} className="text-green-400" />
+              <p className="text-sm text-slate-500">Toți clienții sunt activi</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {atRiskClients.slice(0, 8).map((c, i) => (
+                <div key={i} className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-700 truncate">{c.name}</p>
+                    <p className="text-xs text-slate-400">ultimă factură acum {c.daysSince} zile</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm font-semibold text-slate-800 tabular-nums">{formatCurrency(Math.round(c.totalRev), "RON")}</p>
+                    <p className={`text-xs font-medium ${c.daysSince >= 180 ? "text-red-500" : c.daysSince >= 90 ? "text-orange-500" : "text-amber-500"}`}>
+                      {c.daysSince >= 180 ? "Pierdut?" : c.daysSince >= 90 ? "Risc mare" : "Urmărire"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Payment punctuality */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <h2 className="text-sm font-semibold text-slate-800 mb-5">Punctualitate plăți</h2>
+          {paidWithDue.length === 0 ? (
+            <p className="text-sm text-slate-400 py-4 text-center">Date insuficiente (facturi fără termen de plată)</p>
+          ) : (
+            <div className="space-y-5">
+              <div className="flex gap-4">
+                <div className="flex-1 bg-green-50 rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-green-600 tabular-nums">{onTimePct}%</p>
+                  <p className="text-xs text-green-700 font-medium mt-1">La timp</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{onTime} facturi</p>
+                </div>
+                <div className="flex-1 bg-red-50 rounded-xl p-4 text-center">
+                  <p className="text-3xl font-bold text-red-500 tabular-nums">{latePct}%</p>
+                  <p className="text-xs text-red-600 font-medium mt-1">Cu întârziere</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{late} facturi</p>
+                </div>
+              </div>
+              <div className="h-3 bg-slate-100 rounded-full overflow-hidden flex">
+                <div className="h-full bg-green-400 rounded-l-full transition-all" style={{ width: `${onTimePct}%` }} />
+                <div className="h-full bg-red-400 rounded-r-full transition-all" style={{ width: `${latePct}%` }} />
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                {onTime > 0 && (
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <p className="text-xs text-slate-400 mb-0.5">Plătite în avans (mediu)</p>
+                    <p className="font-semibold text-green-600">{avgEarly} zile înainte</p>
+                  </div>
+                )}
+                {late > 0 && (
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <p className="text-xs text-slate-400 mb-0.5">Întârziere medie</p>
+                    <p className="font-semibold text-red-500">{avgLateDays} zile după</p>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 text-center">din {paidWithDue.length} facturi cu termen de plată setat</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── New vs returning clients + Revenue heatmap ── */}
+      <div className="grid grid-cols-2 gap-6">
+
+        {/* New vs returning clients */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Users size={15} className="text-slate-500" />
+            <h2 className="text-sm font-semibold text-slate-800">Clienți noi vs. recurenți</h2>
+            <span className="text-xs text-slate-400 ml-auto">ultimele 6 luni</span>
+          </div>
+          {clientAcqRows.every((r) => r.total === 0) ? (
+            <p className="text-sm text-slate-400 py-4 text-center">Fără date</p>
+          ) : (
+            <div className="space-y-3">
+              {clientAcqRows.map((row) => (
+                <div key={row.mk}>
+                  <div className="flex items-center justify-between mb-1 text-xs text-slate-500">
+                    <span className={row.isCurrent ? "font-semibold text-blue-600" : ""}>{row.label}</span>
+                    <span>
+                      {row.newClients > 0 && <span className="text-green-600 font-medium">{row.newClients} noi</span>}
+                      {row.newClients > 0 && row.returningClients > 0 && <span className="text-slate-300 mx-1">·</span>}
+                      {row.returningClients > 0 && <span className="text-blue-500">{row.returningClients} recurenți</span>}
+                      {row.total === 0 && <span className="text-slate-300">—</span>}
+                    </span>
+                  </div>
+                  {row.total > 0 && (
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden flex">
+                      <div
+                        className="h-full bg-green-400 rounded-l-full"
+                        style={{ width: `${(row.newClients / maxAcqTotal) * 100}%` }}
+                      />
+                      <div
+                        className="h-full bg-blue-400"
+                        style={{ width: `${(row.returningClients / maxAcqTotal) * 100}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div className="flex items-center gap-4 pt-2 text-xs text-slate-400">
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-400 inline-block" />Clienți noi</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block" />Recurenți</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Revenue heatmap */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <h2 className="text-sm font-semibold text-slate-800 mb-5">Heatmap venituri (all-time)</h2>
+          {heatYears.length === 0 ? (
+            <p className="text-sm text-slate-400 py-4 text-center">Fără date</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr>
+                    <th className="text-left text-slate-400 font-medium pb-2 pr-2 w-10">An</th>
+                    {RO_MONTHS.map((m) => (
+                      <th key={m} className="text-center text-slate-400 font-medium pb-2 px-0.5">{m}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="space-y-1">
+                  {heatYears.map((year) => (
+                    <tr key={year}>
+                      <td className="text-slate-500 font-semibold pr-2 py-0.5">{year}</td>
+                      {Array.from({ length: 12 }, (_, m) => {
+                        const val = heatData[year][m] ?? 0;
+                        const intensity = val > 0 ? Math.max(0.08, val / heatMax) : 0;
+                        const isNow = year === now.getFullYear() && m === now.getMonth();
+                        return (
+                          <td key={m} className="px-0.5 py-0.5">
+                            <div
+                              title={val > 0 ? formatCurrency(Math.round(val), "RON") : "—"}
+                              className={`w-full aspect-square rounded-sm cursor-default ${isNow ? "ring-1 ring-blue-400" : ""}`}
+                              style={{
+                                minWidth: 20,
+                                background: val > 0 ? `rgba(59,130,246,${intensity})` : "#f1f5f9",
+                              }}
+                            />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="flex items-center gap-2 mt-3 text-xs text-slate-400">
+                <span>Mic</span>
+                {[0.08, 0.25, 0.5, 0.75, 1].map((v) => (
+                  <div key={v} className="w-4 h-4 rounded-sm" style={{ background: `rgba(59,130,246,${v})` }} />
+                ))}
+                <span>Mare</span>
               </div>
             </div>
           )}
