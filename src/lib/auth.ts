@@ -19,14 +19,19 @@ export const authOptions: NextAuthOptions = {
     error: "/login?error=1",
   },
   callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id;
+    async jwt({ token, user, account }) {
+      if (user) token.id = user.id;
+      if (account) token.provider = account.provider;
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user && token.id) {
+        session.user.id = token.id as string;
       }
       return session;
     },
   },
   session: {
-    strategy: "database",
+    strategy: "jwt",
   },
 };
