@@ -15,7 +15,7 @@ function LoginForm() {
         <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center mx-auto mb-4">
           <span className="text-white font-bold text-lg">I</span>
         </div>
-        <h1 className="text-xl font-bold text-slate-900">Invoicely</h1>
+        <h1 className="text-xl font-bold text-slate-900">Invoicely v2</h1>
         <p className="text-sm text-slate-500 mt-1">Autentifică-te pentru a continua</p>
       </div>
 
