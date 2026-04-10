@@ -67,7 +67,7 @@ export default function InvoicePreview({
               <>
                 <div style={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>{company.name}</div>
                 <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.7, marginTop: 4 }}>
-                  {company.cui && <div>CUI: {company.cui}</div>}
+                  {company.cui && <div>CUI: {(company as {vatPayer?: boolean}).vatPayer ? `RO${company.cui.replace(/^RO/i, "")}` : company.cui}</div>}
                   {company.address && <div>{company.address}</div>}
                   {company.bank && <div>Bancă: {company.bank}</div>}
                   {company.iban && <div>IBAN: {company.iban}</div>}
@@ -86,7 +86,7 @@ export default function InvoicePreview({
               <>
                 <div style={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>{client.name}</div>
                 <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.7, marginTop: 4 }}>
-                  {client.cui && <div>CUI: {client.cui}</div>}
+                  {client.cui && <div>CUI: {client.vatPayer ? `RO${client.cui.replace(/^RO/i, "")}` : client.cui}</div>}
                   {client.address && <div>{client.address}</div>}
                 </div>
               </>

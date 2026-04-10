@@ -67,7 +67,7 @@ export default function InvoicesTable({ initial }: { initial: Invoice[] }) {
             </td>
             <td className="px-6 py-4">
               <div className="font-medium text-slate-800 dark:text-slate-200">{inv.client.name}</div>
-              {inv.client.cui && <div className="text-xs text-slate-400">{inv.client.cui}</div>}
+              {inv.client.cui && <div className="text-xs text-slate-400">{inv.client.vatPayer ? `RO${inv.client.cui.replace(/^RO/i, "")}` : inv.client.cui}</div>}
             </td>
             <td className="px-6 py-4 text-slate-500">
               {new Date(inv.issueDate).toLocaleDateString("ro-RO")}

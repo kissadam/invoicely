@@ -83,7 +83,7 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
             <div className="bg-slate-50 dark:bg-slate-750 rounded-lg p-4">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Furnizor</p>
               <p className="font-semibold text-slate-800 dark:text-slate-100">{invoice.company?.name ?? "—"}</p>
-              {invoice.company?.cui && <p className="text-xs text-slate-500 mt-1">CUI: {invoice.company.cui}</p>}
+              {invoice.company?.cui && <p className="text-xs text-slate-500 mt-1">CUI: {invoice.company.vatPayer ? `RO${invoice.company.cui.replace(/^RO/i, "")}` : invoice.company.cui}</p>}
               {invoice.company?.address && <p className="text-xs text-slate-500">{invoice.company.address}</p>}
             </div>
             <div className="bg-slate-50 dark:bg-slate-750 rounded-lg p-4">
@@ -91,7 +91,7 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
                 Client {invoice.client.vatPayer ? "(Plătitor TVA)" : "(Neplătitor TVA)"}
               </p>
               <p className="font-semibold text-slate-800 dark:text-slate-100">{invoice.client.name}</p>
-              {invoice.client.cui && <p className="text-xs text-slate-500 mt-1">CUI: {invoice.client.cui}</p>}
+              {invoice.client.cui && <p className="text-xs text-slate-500 mt-1">CUI: {invoice.client.vatPayer ? `RO${invoice.client.cui.replace(/^RO/i, "")}` : invoice.client.cui}</p>}
               {invoice.client.address && <p className="text-xs text-slate-500">{invoice.client.address}</p>}
             </div>
           </div>

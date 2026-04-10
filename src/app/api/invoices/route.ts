@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     prisma.invoice.findMany({
       where,
       include: {
-        client: { select: { id: true, name: true, cui: true } },
+        client: { select: { id: true, name: true, cui: true, vatPayer: true } },
         items:  { orderBy: { position: "asc" } },
       },
       orderBy: { createdAt: "desc" },
