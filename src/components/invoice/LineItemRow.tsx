@@ -14,7 +14,7 @@ interface Props {
   onRemove?: () => void;
 }
 
-export default function LineItemRow({ item, exchangeRate, currency, vatEnabled = false, vatRate = 19, onChange, onRemove }: Props) {
+export default function LineItemRow({ item, exchangeRate, currency, vatEnabled = false, vatRate = 21, onChange, onRemove }: Props) {
   const needsRate = currency !== "RON";
   // Recompute subtotals when qty, price, or rate change
   useEffect(() => {

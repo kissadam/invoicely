@@ -11,6 +11,7 @@ interface CompanyInfo {
   address: string;
   bank?: string | null;
   iban?: string | null;
+  vatPayer?: boolean;
 }
 
 interface Props {
@@ -67,7 +68,7 @@ export default function InvoicePreview({
               <>
                 <div style={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>{company.name}</div>
                 <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.7, marginTop: 4 }}>
-                  {company.cui && <div>CUI: {(company as {vatPayer?: boolean}).vatPayer ? `RO${company.cui.replace(/^RO/i, "")}` : company.cui}</div>}
+                  {company.cui && <div>CUI: {company.vatPayer ? `RO${company.cui.replace(/^RO/i, "")}` : company.cui}</div>}
                   {company.address && <div>{company.address}</div>}
                   {company.bank && <div>Bancă: {company.bank}</div>}
                   {company.iban && <div>IBAN: {company.iban}</div>}
