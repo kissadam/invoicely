@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Search, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Company } from "@prisma/client";
 
@@ -22,13 +23,37 @@ export default function CompanyForm({ existing }: Props) {
     vatRate:  existing?.vatRate != null ? String(existing.vatRate) : "",
   });
   const [saving, setSaving] = useState(false);
+  const [cuiLoading, setCuiLoading] = useState(false);
 
   function set(key: keyof typeof form, val: string | boolean) {
     setForm((f) => ({ ...f, [key]: val }));
   }
 
+  async function lookupCui() {
+    const cui = form.cui.replace(/\D/g, "");
+    if (!cui) return;
+    setCuiLoading(true);
+    try {
+      const res = await fetch(`/api/anaf?cui=${cui}`);
+      if (!res.ok) throw new Error("Nu s-au găsit date pentru acest CUI");
+      const data = await res.json();
+      setForm((f) => ({
+        ...f,
+        name:     data.name    ?? f.name,
+        address:  data.address ?? f.address,
+        vatPayer: data.vatPayer ?? f.vatPayer,
+      }));
+      toast.success("Date preluate din ANAF");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Eroare la căutare CUI");
+    } finally {
+      setCuiLoading(false);
+    }
+  }
+
   async function save() {
-    if (!form.cui || !form.name) {
+    const trimmed = { ...form, cui: form.cui.trim(), name: form.name.trim() };
+    if (!trimmed.cui || !trimmed.name) {
       toast.error("CUI și Denumire sunt obligatorii");
       return;
     }
@@ -39,7 +64,7 @@ export default function CompanyForm({ existing }: Props) {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(trimmed),
       });
       if (!res.ok) throw new Error("Eroare la salvare");
       const data = await res.json();
@@ -54,14 +79,33 @@ export default function CompanyForm({ existing }: Props) {
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="CUI *">
-          <input value={form.cui} onChange={(e) => set("cui", e.target.value)} className={input} placeholder="RO12345678" />
-        </Field>
-        <Field label="Denumire *">
-          <input value={form.name} onChange={(e) => set("name", e.target.value)} className={input} placeholder="Compania Mea SRL" />
-        </Field>
+      {/* CUI with ANAF autofill */}
+      <div>
+        <label className="block text-xs text-slate-500 mb-1.5 font-medium">CUI *</label>
+        <div className="flex gap-2">
+          <input
+            value={form.cui}
+            onChange={(e) => set("cui", e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), lookupCui())}
+            className={input + " flex-1"}
+            placeholder="RO12345678"
+          />
+          <button
+            type="button"
+            onClick={lookupCui}
+            disabled={cuiLoading || !form.cui.trim()}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+          >
+            {cuiLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+            ANAF
+          </button>
+        </div>
+        <p className="text-xs text-slate-400 mt-1">Introdu CUI-ul și apasă ANAF pentru a prelua datele automat.</p>
       </div>
+
+      <Field label="Denumire *">
+        <input value={form.name} onChange={(e) => set("name", e.target.value)} className={input} placeholder="Compania Mea SRL" />
+      </Field>
       <Field label="Adresă">
         <input value={form.address} onChange={(e) => set("address", e.target.value)} className={input} placeholder="Str. Exemplu nr. 1, București" />
       </Field>

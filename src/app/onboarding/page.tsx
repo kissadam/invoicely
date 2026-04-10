@@ -23,7 +23,7 @@ export default function OnboardingPage() {
   }
 
   async function lookupCui() {
-    const cui = form.cui.replace(/\D/g, "");
+    const cui = form.cui.trim().replace(/\D/g, "");
     if (!cui) return;
     setCuiLoading(true);
     try {
@@ -51,7 +51,7 @@ export default function OnboardingPage() {
       const res = await fetch("/api/companies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, cui: form.cui.trim(), name: form.name.trim() }),
       });
       if (!res.ok) {
         const data = await res.json();
