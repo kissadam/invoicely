@@ -11,15 +11,17 @@ import {
   Settings,
   ChevronRight,
   LogOut,
+  BarChart2,
 } from "lucide-react";
 import clsx from "clsx";
 
 const NAV = [
-  { href: "/",          icon: LayoutDashboard, label: "Dashboard"  },
-  { href: "/invoices",  icon: FileText,        label: "Facturi"    },
-  { href: "/clients",   icon: Users,           label: "Clienți"    },
-  { href: "/companies", icon: Building2,       label: "Companii"   },
-  { href: "/settings",  icon: Settings,        label: "Setări"     },
+  { href: "/",           icon: LayoutDashboard, label: "Dashboard"  },
+  { href: "/invoices",   icon: FileText,        label: "Facturi"    },
+  { href: "/clients",    icon: Users,           label: "Clienți"    },
+  { href: "/analytics",  icon: BarChart2,       label: "Analytics"  },
+  { href: "/companies",  icon: Building2,       label: "Companii"   },
+  { href: "/settings",   icon: Settings,        label: "Setări"     },
 ];
 
 export default function Sidebar() {
