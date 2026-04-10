@@ -47,6 +47,20 @@ export async function PATCH(
   if (!existing) return NextResponse.json({ error: "Factura nu a fost găsită" }, { status: 404 });
 
   const body = await req.json();
+
+  if (body.exchangeRate !== undefined && (body.exchangeRate <= 0 || body.exchangeRate > 100_000))
+    return NextResponse.json({ error: "exchangeRate invalid" }, { status: 400 });
+  if (body.vatRate !== undefined && (body.vatRate < 0 || body.vatRate > 100))
+    return NextResponse.json({ error: "vatRate invalid" }, { status: 400 });
+  if (body.items) {
+    for (const item of body.items) {
+      if (Number(item.quantity) <= 0 || Number(item.quantity) > 1_000_000)
+        return NextResponse.json({ error: "Cantitate invalidă în articole" }, { status: 400 });
+      if (Number(item.priceEur) < 0 || Number(item.priceEur) > 10_000_000)
+        return NextResponse.json({ error: "Preț invalid în articole" }, { status: 400 });
+    }
+  }
+
   const exchangeRate = body.exchangeRate ?? Number(existing.exchangeRate);
   const vatRate = body.vatRate ?? 0;
 

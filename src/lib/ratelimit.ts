@@ -19,19 +19,20 @@ const store: Map<string, Entry> =
     return m;
   })();
 
-const MAX_REQUESTS = 5;
-const WINDOW_MS = 10 * 60 * 1000; // 10 minutes
-
-export function checkRateLimit(key: string): { allowed: boolean; retryAfterSec: number } {
+export function checkRateLimit(
+  key: string,
+  maxRequests = 5,
+  windowMs = 10 * 60 * 1000,
+): { allowed: boolean; retryAfterSec: number } {
   const now = Date.now();
   const entry = store.get(key);
 
   if (!entry || now > entry.resetAt) {
-    store.set(key, { count: 1, resetAt: now + WINDOW_MS });
+    store.set(key, { count: 1, resetAt: now + windowMs });
     return { allowed: true, retryAfterSec: 0 };
   }
 
-  if (entry.count >= MAX_REQUESTS) {
+  if (entry.count >= maxRequests) {
     const retryAfterSec = Math.ceil((entry.resetAt - now) / 1000);
     return { allowed: false, retryAfterSec };
   }

@@ -9,13 +9,23 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fetchAnafCompany, parseCUI } from "@/lib/anaf";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 const CACHE_TTL_HOURS = 24;
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { cui: string } }
 ) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const { allowed, retryAfterSec } = checkRateLimit(`company:${ip}`, 30, 60_000);
+  if (!allowed) {
+    return NextResponse.json({ error: "Prea multe cereri. Încearcă din nou mai târziu." }, {
+      status: 429,
+      headers: { "Retry-After": String(retryAfterSec) },
+    });
+  }
+
   const { cui } = params;
 
   if (!cui || cui.trim().length < 2) {

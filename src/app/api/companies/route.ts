@@ -24,6 +24,9 @@ export async function POST(req: NextRequest) {
   if (!body.cui || !body.name) {
     return NextResponse.json({ error: "cui și name sunt obligatorii" }, { status: 400 });
   }
+  if (body.vatRate != null && (Number(body.vatRate) < 0 || Number(body.vatRate) > 100)) {
+    return NextResponse.json({ error: "vatRate invalid" }, { status: 400 });
+  }
 
   const data = {
     userId,
@@ -39,12 +42,11 @@ export async function POST(req: NextRequest) {
   };
 
   try {
-    // Use upsert so re-creating a deleted company (same CUI) works
-    const company = await prisma.company.upsert({
-      where: { cui: body.cui },
-      create: data,
-      update: { ...data, userId }, // keep userId guard in update too
-    });
+    // Scope by userId to prevent IDOR — a user can only upsert their own company
+    const existing = await prisma.company.findFirst({ where: { userId, cui: body.cui } });
+    const company = existing
+      ? await prisma.company.update({ where: { id: existing.id }, data })
+      : await prisma.company.create({ data });
     return NextResponse.json(company, { status: 201 });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

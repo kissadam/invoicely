@@ -66,7 +66,7 @@ model VerificationToken {
 model Company {
   id        String    @id @default(cuid())
   userId    String
-  cui       String    @unique
+  cui       String
   name      String
   address   String?
   vatPayer  Boolean   @default(false)
@@ -80,6 +80,7 @@ model Company {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   invoices  Invoice[]
 
+  @@unique([userId, cui])
   @@map("companies")
 }
 

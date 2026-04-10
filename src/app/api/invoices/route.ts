@@ -70,8 +70,19 @@ export async function POST(req: NextRequest) {
   }
 
   if (!body.clientId)              return NextResponse.json({ error: "clientId este obligatoriu" }, { status: 400 });
-  if (!body.exchangeRate || body.exchangeRate <= 0) return NextResponse.json({ error: "exchangeRate invalid" }, { status: 400 });
+  if (!body.exchangeRate || body.exchangeRate <= 0 || body.exchangeRate > 100_000)
+    return NextResponse.json({ error: "exchangeRate invalid" }, { status: 400 });
   if (!body.items?.length)         return NextResponse.json({ error: "Factura trebuie să conțină cel puțin un articol" }, { status: 400 });
+
+  const vatRate = body.vatRate ?? 0;
+  if (vatRate < 0 || vatRate > 100) return NextResponse.json({ error: "vatRate invalid" }, { status: 400 });
+
+  for (const item of body.items) {
+    if (Number(item.quantity) <= 0 || Number(item.quantity) > 1_000_000)
+      return NextResponse.json({ error: "Cantitate invalidă în articole" }, { status: 400 });
+    if (Number(item.priceEur) < 0 || Number(item.priceEur) > 10_000_000)
+      return NextResponse.json({ error: "Preț invalid în articole" }, { status: 400 });
+  }
 
   let number = body.invoiceNumber?.trim();
   if (!number) {
@@ -79,8 +90,6 @@ export async function POST(req: NextRequest) {
     const count = await prisma.invoice.count({ where: { userId } });
     number = generateInvoiceNumber(year, count + 1);
   }
-
-  const vatRate = body.vatRate ?? 0;
   const { items: computedItems, totals } = computeInvoice(body.items, body.exchangeRate, vatRate);
 
   const invoice = await prisma.invoice.create({
