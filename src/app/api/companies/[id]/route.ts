@@ -25,16 +25,16 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { userId, error } = await requireUserId();
-  if (error) return error;
-
-  const existing = await prisma.company.findFirst({
-    where: { id: params.id, userId },
-  });
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const body = await req.json();
   try {
+    const { userId, error } = await requireUserId();
+    if (error) return error;
+
+    const existing = await prisma.company.findFirst({
+      where: { id: params.id, userId },
+    });
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const body = await req.json();
     const company = await prisma.company.update({
       where: { id: params.id },
       data: {
@@ -52,9 +52,10 @@ export async function PATCH(
     return NextResponse.json(company);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
+    console.error("PATCH /api/companies/[id] error:", msg);
     const isDupe = msg.includes("Unique constraint") || msg.includes("P2002");
     return NextResponse.json(
-      { error: isDupe ? `CUI-ul "${body.cui}" există deja în baza de date` : "Eroare la salvare" },
+      { error: isDupe ? "CUI-ul există deja în baza de date" : msg },
       { status: 400 }
     );
   }
