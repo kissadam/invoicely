@@ -23,7 +23,7 @@ export default function CompanyForm({ existing }: Props) {
   });
   const [saving, setSaving] = useState(false);
 
-  function set(key: keyof typeof form, val: string) {
+  function set(key: keyof typeof form, val: string | boolean) {
     setForm((f) => ({ ...f, [key]: val }));
   }
 
@@ -80,6 +80,34 @@ export default function CompanyForm({ existing }: Props) {
         <Field label="Email">
           <input value={form.email} onChange={(e) => set("email", e.target.value)} className={input} type="email" />
         </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex items-center gap-3 pt-1">
+          <input
+            id="vatPayer"
+            type="checkbox"
+            checked={!!form.vatPayer}
+            onChange={(e) => setForm((f) => ({ ...f, vatPayer: e.target.checked }))}
+            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          />
+          <label htmlFor="vatPayer" className="text-sm text-slate-700 dark:text-slate-200 font-medium select-none">
+            Plătitor TVA (RO prefix)
+          </label>
+        </div>
+        {form.vatPayer && (
+          <Field label="Cotă TVA (%)">
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              value={form.vatRate}
+              onChange={(e) => set("vatRate", e.target.value)}
+              className={input}
+              placeholder="21"
+            />
+          </Field>
+        )}
       </div>
       <div className="flex justify-end pt-2">
         <button

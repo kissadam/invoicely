@@ -28,13 +28,15 @@ export async function POST(req: NextRequest) {
   const company = await prisma.company.create({
     data: {
       userId,
-      cui:     body.cui,
-      name:    body.name,
-      address: body.address ?? null,
-      bank:    body.bank    ?? null,
-      iban:    body.iban    ?? null,
-      phone:   body.phone   ?? null,
-      email:   body.email   ?? null,
+      cui:      body.cui,
+      name:     body.name,
+      address:  body.address  ?? null,
+      bank:     body.bank     ?? null,
+      iban:     body.iban     ?? null,
+      phone:    body.phone    ?? null,
+      email:    body.email    ?? null,
+      vatPayer: body.vatPayer ?? false,
+      vatRate:  body.vatRate != null ? Number(body.vatRate) : null,
     },
   });
   return NextResponse.json(company, { status: 201 });

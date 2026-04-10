@@ -15,6 +15,7 @@ export default function OnboardingPage() {
     address: "",
     bank: "",
     iban: "",
+    vatPayer: false,
   });
 
   function set(field: string, value: string) {
@@ -33,6 +34,7 @@ export default function OnboardingPage() {
         ...f,
         name: data.name ?? f.name,
         address: data.address ?? f.address,
+        vatPayer: data.vatPayer ?? f.vatPayer,
       }));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Eroare la căutare CUI");

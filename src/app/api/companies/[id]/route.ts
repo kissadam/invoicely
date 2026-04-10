@@ -21,13 +21,15 @@ export async function PATCH(
   const company = await prisma.company.update({
     where: { id: params.id },
     data: {
-      ...(body.cui     && { cui:     body.cui     }),
-      ...(body.name    && { name:    body.name    }),
-      ...(body.address !== undefined && { address: body.address }),
-      ...(body.bank    !== undefined && { bank:    body.bank    }),
-      ...(body.iban    !== undefined && { iban:    body.iban    }),
-      ...(body.phone   !== undefined && { phone:   body.phone   }),
-      ...(body.email   !== undefined && { email:   body.email   }),
+      ...(body.cui      && { cui:      body.cui                            }),
+      ...(body.name     && { name:     body.name                           }),
+      ...(body.address  !== undefined && { address:  body.address          }),
+      ...(body.bank     !== undefined && { bank:     body.bank             }),
+      ...(body.iban     !== undefined && { iban:     body.iban             }),
+      ...(body.phone    !== undefined && { phone:    body.phone            }),
+      ...(body.email    !== undefined && { email:    body.email            }),
+      ...(body.vatPayer !== undefined && { vatPayer: Boolean(body.vatPayer) }),
+      ...(body.vatRate  !== undefined && { vatRate:  body.vatRate != null ? Number(body.vatRate) : null }),
     },
   });
   return NextResponse.json(company);
