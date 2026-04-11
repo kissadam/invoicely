@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Globe, Download, Trash2, FileText, Shield, Loader2, CheckCircle2 } from "lucide-react";
+import { Globe, Download, Trash2, FileText, Shield, Loader2, CheckCircle2, CreditCard } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { Locale } from "@/lib/i18n";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import BillingSection from "@/components/BillingSection";
 
 export default function SettingsPage() {
   const { t, locale, setLocale } = useLanguage();
@@ -61,6 +62,11 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold text-slate-900">{t.settings.title}</h1>
         <p className="text-sm text-slate-500 mt-1">{t.settings.subtitle}</p>
       </div>
+
+      {/* ── Billing ── */}
+      <Section icon={<CreditCard size={16} className="text-blue-500" />} title="Plan & Billing">
+        <BillingSection />
+      </Section>
 
       {/* ── Language ── */}
       <Section icon={<Globe size={16} className="text-blue-500" />} title={t.settings.language}>
