@@ -83,12 +83,21 @@ export default function NewInvoiceFlow() {
 
       const byLength = [...savedClients].sort((a, b) => b.name.length - a.name.length);
 
+      // Split input into words ≥4 chars for reverse-lookup
+      const inputWords = inputLower.split(/[\s,.:;!?()]+/).filter(w => w.length >= 4);
+
       const directMatch = byLength.find((c) => {
         const full  = c.name.toLowerCase();
         const short = stripSuffix(c.name).toLowerCase();
         return (
+          // input contains the full client name  → "ideal concept srl" in input
           inputLower.includes(full) ||
-          (short.length > 3 && inputLower.includes(short))
+          // input contains the stripped name     → "ideal concept" in input
+          (short.length > 3 && inputLower.includes(short)) ||
+          // a word from input is a substring of the client name
+          // → "akvisual" matches client "akvisuals"
+          // → "concept" matches client "Ideal Concept SRL"
+          inputWords.some(w => full.includes(w) || (short.length > 3 && short.includes(w)))
         );
       });
 
