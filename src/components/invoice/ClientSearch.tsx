@@ -24,10 +24,11 @@ interface SavedClient {
 interface Props {
   value: SelectedClient | null;
   onChange: (client: SelectedClient) => void;
+  initialQuery?: string;
 }
 
-export default function ClientSearch({ value, onChange }: Props) {
-  const [query, setQuery] = useState("");
+export default function ClientSearch({ value, onChange, initialQuery }: Props) {
+  const [query, setQuery] = useState(initialQuery ?? "");
   const [saved, setSaved] = useState<SavedClient[]>([]);
   const [filtered, setFiltered] = useState<SavedClient[]>([]);
   const [open, setOpen] = useState(false);

@@ -91,17 +91,17 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1.5">Nume</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Opțional" className={inp} />
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">Nume <span className="text-red-400">*</span></label>
+                <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Numele tău" className={inp} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1.5">Telefon</label>
-                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Opțional" className={inp} />
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">Telefon <span className="text-red-400">*</span></label>
+                <input value={phone} onChange={(e) => setPhone(e.target.value)} required placeholder="Ex: 07xx xxx xxx" className={inp} />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1.5">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Pentru a-ți răspunde" className={inp} />
+              <label className="block text-xs font-medium text-slate-500 mb-1.5">Email <span className="text-red-400">*</span></label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="adresa@ta.ro" className={inp} />
             </div>
 
             {error && <p className="text-xs text-red-600">{error}</p>}

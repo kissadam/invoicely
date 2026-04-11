@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       access_key: key,
       subject:    `[Invoicely] ${typeLabel[type] ?? type}: ${subject}`,
       from_name:  name || "Invoicely User",
-      email:      email || "noreply@invoicely.ro",
+      ...(email ? { email } : {}),
       message: [
         `Tip: ${typeLabel[type] ?? type}`,
         `Subiect: ${subject}`,

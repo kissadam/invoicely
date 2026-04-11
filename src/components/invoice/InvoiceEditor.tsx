@@ -63,10 +63,12 @@ export interface EditableInvoice {
 export default function InvoiceEditor({
   invoiceId,
   initialData,
+  initialClientQuery,
   readOnly = false,
 }: {
   invoiceId?: string;
   initialData?: EditableInvoice;
+  initialClientQuery?: string;
   readOnly?: boolean;
 }) {
   const router = useRouter();
@@ -118,7 +120,9 @@ export default function InvoiceEditor({
   }, []);
 
   // Items
-  const [items, setItems] = useState<InvoiceItemForm[]>(initialData?.items ?? [EMPTY_ITEM()]);
+  const [items, setItems] = useState<InvoiceItemForm[]>(
+    initialData?.items && initialData.items.length > 0 ? initialData.items : [EMPTY_ITEM()]
+  );
 
   // Invoice meta
   const [invoiceNumber, setInvoiceNumber] = useState(initialData?.number ?? "");
@@ -400,7 +404,7 @@ export default function InvoiceEditor({
           <div className="grid grid-cols-2 gap-6">
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
               <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Client</h2>
-              <ClientSearch value={client} onChange={setClient} />
+              <ClientSearch value={client} onChange={setClient} initialQuery={initialClientQuery} />
             </div>
 
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">

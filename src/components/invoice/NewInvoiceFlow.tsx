@@ -1,10 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sparkles, ArrowRight, PenLine, Loader2 } from "lucide-react";
 import InvoiceEditor from "./InvoiceEditor";
 import type { EditableInvoice } from "./InvoiceEditor";
+import type { SelectedClient } from "./ClientSearch";
 import { parseInvoicePrompt } from "@/lib/parseInvoicePrompt";
+
+/** Fades in children after mount — used for the editor entrance animation. */
+function FadeIn({ children }: { children: React.ReactNode }) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  return (
+    <div
+      className="transition-all duration-500 ease-out"
+      style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(10px)" }}
+    >
+      {children}
+    </div>
+  );
+}
+
+interface SavedClient {
+  id: string;
+  cui: string | null;
+  name: string;
+  address: string | null;
+  vatPayer: boolean;
+}
 
 const EXAMPLES = [
   "Website design for Acme SRL 1200 EUR",
@@ -17,43 +43,77 @@ export default function NewInvoiceFlow() {
   const [mode, setMode]       = useState<"prompt" | "editor">("prompt");
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
+  const [exiting, setExiting] = useState(false);
   const [prefill, setPrefill] = useState<Partial<EditableInvoice> | undefined>();
+  const [initialClientQuery, setInitialClientQuery] = useState<string | undefined>();
+
+  // Pre-load saved clients so we can match the parsed name against them
+  const [savedClients, setSavedClients] = useState<SavedClient[]>([]);
+  useEffect(() => {
+    fetch("/api/clients")
+      .then((r) => r.json())
+      .then(setSavedClients)
+      .catch(() => {});
+  }, []);
 
   function handleGenerate() {
     if (!input.trim()) return;
     setLoading(true);
+    setExiting(true);
 
-    // Small delay so the spinner is visible, then parse synchronously
     setTimeout(() => {
       const parsed = parseInvoicePrompt(input);
 
       const today = new Date().toISOString().split("T")[0];
       const due   = new Date(Date.now() + 30 * 86_400_000).toISOString().split("T")[0];
 
-      const hasClient = parsed.clientName && parsed.clientName !== "Client";
+      // Try to match parsed client name against the saved clients list
+      let matchedClient: SelectedClient | undefined;
+      let clientQuery: string | undefined;
+
+      const parsedName = parsed.clientName && parsed.clientName !== "Client"
+        ? parsed.clientName
+        : undefined;
+
+      if (parsedName) {
+        const q = parsedName.toLowerCase();
+        const found = savedClients.find(
+          (c) => c.name.toLowerCase().includes(q) || q.includes(c.name.toLowerCase())
+        );
+        if (found) {
+          matchedClient = {
+            id: found.id,
+            cui: found.cui ?? "",
+            name: found.name,
+            address: found.address ?? "",
+            vatPayer: found.vatPayer,
+          };
+        } else {
+          // No match — pre-fill the search input so the user can complete the client
+          clientQuery = parsedName;
+        }
+      }
 
       const initial: Partial<EditableInvoice> = {
         currency:  parsed.currency,
         issueDate: today,
         dueDate:   due,
         notes:     parsed.notes,
-        ...(hasClient && {
-          client: { id: undefined, cui: "", name: parsed.clientName, address: "", vatPayer: false },
-        }),
-        items: parsed.amount > 0
-          ? [{
-              position:    1,
-              name:        parsed.description,
-              unit:        "buc",
-              quantity:    1,
-              priceEur:    parsed.amount,
-              subtotalEur: parsed.amount,
-              subtotalRon: 0,
-            }]
-          : [],
+        ...(matchedClient ? { client: matchedClient } : {}),
+        // Always include one item row; price is 0 if no amount was detected
+        items: [{
+          position:    1,
+          name:        parsed.description,
+          unit:        "buc",
+          quantity:    1,
+          priceEur:    parsed.amount,
+          subtotalEur: parsed.amount,
+          subtotalRon: 0,
+        }],
       };
 
       setPrefill(initial);
+      setInitialClientQuery(clientQuery);
       setLoading(false);
       setMode("editor");
     }, 400);
@@ -61,14 +121,20 @@ export default function NewInvoiceFlow() {
 
   if (mode === "editor") {
     return (
-      <InvoiceEditor
-        initialData={prefill as EditableInvoice | undefined}
-      />
+      <FadeIn>
+        <InvoiceEditor
+          initialData={prefill as EditableInvoice | undefined}
+          initialClientQuery={initialClientQuery}
+        />
+      </FadeIn>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+    <div
+      className="flex flex-col items-center justify-center min-h-[60vh] px-4 transition-all duration-300 ease-in"
+      style={{ opacity: exiting ? 0 : 1, transform: exiting ? "translateY(-8px)" : "translateY(0)" }}
+    >
 
       {/* Icon + heading */}
       <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mb-5">
