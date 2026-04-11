@@ -34,7 +34,7 @@ export async function POST(
       clientId:   source.clientId,
       companyId:  source.companyId,
       templateId: source.templateId,
-      status:     "DRAFT",
+      status:     "SENT",
       issueDate:  new Date(),
       dueDate:    source.dueDate,
       exchangeRate: source.exchangeRate,

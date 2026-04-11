@@ -12,14 +12,14 @@ const en = {
     support: "Support & Feedback", logout: "Sign out", language: "Language",
   },
   status: {
-    DRAFT: "Draft", SENT: "Issued", PAID: "Paid", CANCELLED: "Cancelled",
+    DRAFT: "Unpaid", SENT: "Unpaid", PAID: "Paid", CANCELLED: "Cancelled",
   },
   dashboard: {
     title: "Dashboard",
     subtitle: "Welcome! Manage your company invoices.",
     totalInvoiced: "Total Invoiced (RON)",
     totalInvoices: "Total Invoices",
-    drafts: "Drafts", clients: "Clients",
+    unpaid: "Unpaid", clients: "Clients",
     recentInvoices: "Recent Invoices",
     viewAll: "View all →",
     noInvoices: "No invoices.",
@@ -231,14 +231,14 @@ const ro: typeof en = {
     support: "Support & Feedback", logout: "Deconectare", language: "Limbă",
   },
   status: {
-    DRAFT: "Ciornă", SENT: "Pregătită", PAID: "Plătită", CANCELLED: "Anulată",
+    DRAFT: "Neîncasată", SENT: "Neîncasată", PAID: "Plătită", CANCELLED: "Anulată",
   },
   dashboard: {
     title: "Dashboard",
     subtitle: "Bun venit! Gestionați facturile companiei.",
     totalInvoiced: "Total facturi (RON)",
     totalInvoices: "Total facturi",
-    drafts: "Ciorne", clients: "Clienți",
+    unpaid: "Neîncasate", clients: "Clienți",
     recentInvoices: "Facturi recente",
     viewAll: "Vezi toate →",
     noInvoices: "Nicio factură.",

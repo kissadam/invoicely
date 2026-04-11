@@ -18,12 +18,13 @@ interface Invoice {
 }
 
 const STATUS_STYLES: Record<string, string> = {
+  DRAFT:     "bg-slate-100 text-slate-600",
   SENT:      "bg-slate-100 text-slate-600",
   PAID:      "bg-green-100 text-green-700",
   CANCELLED: "bg-red-100 text-red-600",
 };
 const STATUS_LABELS: Record<string, string> = {
-  SENT: "Pregătită", PAID: "Plătită", CANCELLED: "Anulată",
+  DRAFT: "Neîncasată", SENT: "Neîncasată", PAID: "Plătită", CANCELLED: "Anulată",
 };
 
 export default function InvoicesTable({ initial }: { initial: Invoice[] }) {

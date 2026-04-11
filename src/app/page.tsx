@@ -12,17 +12,17 @@ import { formatCurrency } from "@/lib/calculations";
 import { requirePageSession } from "@/lib/session";
 
 async function getStats(userId: string) {
-  const [total, draft, paid, clients] = await Promise.all([
+  const [total, unpaid, paid, clients] = await Promise.all([
     prisma.invoice.aggregate({
       where: { userId },
       _sum: { totalRon: true },
       _count: true,
     }),
-    prisma.invoice.count({ where: { userId, status: "DRAFT" } }),
+    prisma.invoice.count({ where: { userId, status: { in: ["DRAFT", "SENT"] } } }),
     prisma.invoice.count({ where: { userId, status: "PAID"  } }),
     prisma.client.count({ where: { userId } }),
   ]);
-  return { total, draft, paid, clients };
+  return { total, unpaid, paid, clients };
 }
 
 async function getRecentInvoices(userId: string) {
@@ -36,13 +36,13 @@ async function getRecentInvoices(userId: string) {
 
 const STATUS_STYLES: Record<string, string> = {
   DRAFT:     "bg-slate-100 text-slate-600",
-  SENT:      "bg-blue-100 text-blue-700",
+  SENT:      "bg-slate-100 text-slate-600",
   PAID:      "bg-green-100 text-green-700",
   CANCELLED: "bg-red-100 text-red-600",
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  DRAFT: "Ciornă", SENT: "Trimisă", PAID: "Plătită", CANCELLED: "Anulată",
+  DRAFT: "Neîncasată", SENT: "Neîncasată", PAID: "Plătită", CANCELLED: "Anulată",
 };
 
 export default async function DashboardPage() {
@@ -87,8 +87,8 @@ export default async function DashboardPage() {
         />
         <StatCard
           icon={<Clock size={20} className="text-amber-600" />}
-          label="Ciorne"
-          value={String(stats.draft)}
+          label="Neîncasate"
+          value={String(stats.unpaid)}
           bg="bg-amber-50"
         />
         <StatCard
