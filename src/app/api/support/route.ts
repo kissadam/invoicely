@@ -3,12 +3,12 @@ export const runtime = "nodejs";
 
 /**
  * POST /api/support
- * Forwards feedback/support submissions to hello@akvisuals.ro via Resend.
+ * Forwards feedback/support submissions to hello@akvisuals.ro via Web3Forms.
+ * Set WEB3FORMS_KEY in Vercel env vars (get key at web3forms.com for hello@akvisuals.ro).
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/ratelimit";
-import { Resend } from "resend";
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
@@ -20,9 +20,9 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const key = process.env.RESEND_API_KEY;
+  const key = process.env.WEB3FORMS_KEY;
   if (!key) {
-    console.error("RESEND_API_KEY not set");
+    console.error("WEB3FORMS_KEY not set");
     return NextResponse.json({ error: "Support not configured" }, { status: 503 });
   }
 
@@ -40,30 +40,31 @@ export async function POST(req: NextRequest) {
     other:    "Altele",
   };
 
-  const resend = new Resend(key);
-
-  const text = [
-    `Tip: ${typeLabel[type] ?? type}`,
-    `Subiect: ${subject}`,
-    ``,
-    description,
-    ``,
-    name  ? `Nume: ${name}`     : "",
-    email ? `Email: ${email}`   : "",
-    phone ? `Telefon: ${phone}` : "",
-  ].filter(Boolean).join("\n");
-
-  const { error } = await resend.emails.send({
-    from:     "Invoicely Support <onboarding@resend.dev>",
-    to:       "hello@akvisuals.ro",
-    replyTo:  email || undefined,
-    subject:  `[Invoicely] ${typeLabel[type] ?? type}: ${subject}`,
-    text,
+  const res = await fetch("https://api.web3forms.com/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      access_key: key,
+      subject:    `[Invoicely] ${typeLabel[type] ?? type}: ${subject}`,
+      from_name:  name || "Invoicely User",
+      ...(email ? { email } : {}),
+      message: [
+        `Tip: ${typeLabel[type] ?? type}`,
+        `Subiect: ${subject}`,
+        ``,
+        description,
+        ``,
+        name  ? `Nume: ${name}`     : "",
+        email ? `Email: ${email}`   : "",
+        phone ? `Telefon: ${phone}` : "",
+      ].filter(Boolean).join("\n"),
+    }),
   });
 
-  if (error) {
-    console.error("Resend error:", error);
-    return NextResponse.json({ error: error.message ?? "Eroare la trimitere" }, { status: 502 });
+  const data = await res.json();
+  if (!data.success) {
+    console.error("Web3Forms error:", JSON.stringify(data));
+    return NextResponse.json({ error: data.message ?? "Eroare la trimitere" }, { status: 502 });
   }
 
   return NextResponse.json({ ok: true });
