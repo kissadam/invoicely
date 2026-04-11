@@ -27,6 +27,11 @@ body {
   @apply bg-slate-900 text-slate-100;
 }
 
+/* Typography */
+.text-2xl {
+  word-break: break-word;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { @apply bg-transparent; }
