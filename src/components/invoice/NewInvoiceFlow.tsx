@@ -67,31 +67,48 @@ export default function NewInvoiceFlow() {
       const today = new Date().toISOString().split("T")[0];
       const due   = new Date(Date.now() + 30 * 86_400_000).toISOString().split("T")[0];
 
-      // Try to match parsed client name against the saved clients list
+      // ── Client matching ──────────────────────────────────────────────────────
+      // Strategy: scan the raw input directly against every saved client name.
+      // This is far more reliable than trusting the regex parser to extract a
+      // name, because Romanian constructs like "in valoare de" confuse it.
+      //
+      // We strip common legal suffixes (SRL, SA …) so "Ideal Concept" matches
+      // a saved client called "Ideal Concept SRL". Sort longest-first so we
+      // always prefer the most-specific match.
+      const inputLower = input.toLowerCase();
+
+      function stripSuffix(name: string) {
+        return name.replace(/\b(srl|sa|scs|snc|ra|sas|llc|ltd|inc|gmbh|bv|ag|oy|ab)\b\.?/gi, "").trim();
+      }
+
+      const byLength = [...savedClients].sort((a, b) => b.name.length - a.name.length);
+
+      const directMatch = byLength.find((c) => {
+        const full  = c.name.toLowerCase();
+        const short = stripSuffix(c.name).toLowerCase();
+        return (
+          inputLower.includes(full) ||
+          (short.length > 3 && inputLower.includes(short))
+        );
+      });
+
       let matchedClient: SelectedClient | undefined;
       let clientQuery: string | undefined;
 
-      const parsedName = parsed.clientName && parsed.clientName !== "Client"
-        ? parsed.clientName
-        : undefined;
-
-      if (parsedName) {
-        const q = parsedName.toLowerCase();
-        const found = savedClients.find(
-          (c) => c.name.toLowerCase().includes(q) || q.includes(c.name.toLowerCase())
-        );
-        if (found) {
-          matchedClient = {
-            id: found.id,
-            cui: found.cui ?? "",
-            name: found.name,
-            address: found.address ?? "",
-            vatPayer: found.vatPayer,
-          };
-        } else {
-          // No match — pre-fill the search input so the user can complete the client
-          clientQuery = parsedName;
-        }
+      if (directMatch) {
+        matchedClient = {
+          id:       directMatch.id,
+          cui:      directMatch.cui      ?? "",
+          name:     directMatch.name,
+          address:  directMatch.address  ?? "",
+          vatPayer: directMatch.vatPayer,
+        };
+      } else {
+        // No saved client found — use whatever the regex extracted as a hint
+        const parsedName = parsed.clientName && parsed.clientName !== "Client"
+          ? parsed.clientName
+          : undefined;
+        if (parsedName) clientQuery = parsedName;
       }
 
       const initial: Partial<EditableInvoice> = {

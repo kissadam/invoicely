@@ -110,6 +110,9 @@ export function parseInvoicePrompt(input: string): ParsedInvoice {
   // Strip common preambles
   text = text.replace(/^\s*(invoice|factură?|factura)\s*(for|pentru|:)?\s*/i, "");
 
+  // Normalise "1000euro" / "500ron" → "1000 euro" / "500 ron" so \b boundaries work
+  text = text.replace(/(\d)(eur(?:o)?|usd|ron|gbp|chf|lei|sek|dkk|nok)\b/gi, "$1 $2");
+
   const { currency, cleaned: t1 } = detectCurrency(text);
   const { amount,   cleaned: t2 } = detectAmount(t1);
   const { clientName, cleaned: t3 } = detectClient(t2);
