@@ -9,23 +9,23 @@ import { requirePageSession } from "@/lib/session";
 import { cookies } from "next/headers";
 import { getT } from "@/lib/i18n";
 
-async function getStats(userId: string) {
+async function getStats(companyId: string) {
   const [total, unpaid, paid, clients] = await Promise.all([
     prisma.invoice.aggregate({
-      where: { userId },
+      where: { companyId },
       _sum: { totalRon: true },
       _count: true,
     }),
-    prisma.invoice.count({ where: { userId, status: { in: ["DRAFT", "SENT"] } } }),
-    prisma.invoice.count({ where: { userId, status: "PAID"  } }),
-    prisma.client.count({ where: { userId } }),
+    prisma.invoice.count({ where: { companyId, status: { in: ["DRAFT", "SENT"] } } }),
+    prisma.invoice.count({ where: { companyId, status: "PAID"  } }),
+    prisma.client.count({ where: { companyId } }),
   ]);
   return { total, unpaid, paid, clients };
 }
 
-async function getRecentInvoices(userId: string) {
+async function getRecentInvoices(companyId: string) {
   return prisma.invoice.findMany({
-    where: { userId },
+    where: { companyId },
     include: { client: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
     take: 5,
@@ -40,14 +40,13 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default async function DashboardPage() {
-  const userId = await requirePageSession();
+  const { companyId } = await requirePageSession();
   const locale = cookies().get("locale")?.value;
   const t = getT(locale);
 
-  const company = await prisma.company.findFirst({ where: { userId } });
-  if (!company) redirect("/onboarding");
+  if (!companyId) redirect("/onboarding");
 
-  const [stats, recent] = await Promise.all([getStats(userId), getRecentInvoices(userId)]);
+  const [stats, recent] = await Promise.all([getStats(companyId), getRecentInvoices(companyId)]);
 
   const totalRon = Number(stats.total._sum.totalRon ?? 0);
 

@@ -10,18 +10,18 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { computeInvoice } from "@/lib/calculations";
-import { requireUserId } from "@/lib/session";
+import { requireActiveCompany } from "@/lib/session";
 import type { InvoiceItemForm } from "@/types/invoice";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { userId, error } = await requireUserId();
+  const { companyId, error } = await requireActiveCompany();
   if (error) return error;
 
   const invoice = await prisma.invoice.findFirst({
-    where: { id: params.id, userId },
+    where: { id: params.id, companyId },
     include: {
       items:    { orderBy: { position: "asc" } },
       client:   true,
@@ -38,11 +38,11 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { userId, error } = await requireUserId();
+  const { companyId, error } = await requireActiveCompany();
   if (error) return error;
 
   const existing = await prisma.invoice.findFirst({
-    where: { id: params.id, userId },
+    where: { id: params.id, companyId },
   });
   if (!existing) return NextResponse.json({ error: "Factura nu a fost găsită" }, { status: 404 });
 
@@ -126,11 +126,11 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { userId, error } = await requireUserId();
+  const { companyId, error } = await requireActiveCompany();
   if (error) return error;
 
   const existing = await prisma.invoice.findFirst({
-    where: { id: params.id, userId },
+    where: { id: params.id, companyId },
   });
   if (!existing) return NextResponse.json({ error: "Factura nu a fost găsită" }, { status: 404 });
 

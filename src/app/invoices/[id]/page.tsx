@@ -10,9 +10,10 @@ import type { EditableInvoice } from "@/components/invoice/InvoiceEditor";
 import MarkPaidButton from "@/components/invoice/MarkPaidButton";
 
 export default async function InvoiceDetailPage({ params }: { params: { id: string } }) {
-  const userId = await requirePageSession();
+  const { companyId } = await requirePageSession();
+  if (!companyId) notFound();
   const invoice = await prisma.invoice.findFirst({
-    where: { id: params.id, userId },
+    where: { id: params.id, companyId },
     include: {
       items:   { orderBy: { position: "asc" } },
       client:  true,

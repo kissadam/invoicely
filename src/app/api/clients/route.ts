@@ -2,16 +2,16 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
- * GET  /api/clients  — list clients
- * POST /api/clients  — create client
+ * GET  /api/clients  — list clients for active company
+ * POST /api/clients  — create client scoped to active company
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireUserId } from "@/lib/session";
+import { requireActiveCompany } from "@/lib/session";
 
 export async function GET(req: NextRequest) {
-  const { userId, error } = await requireUserId();
+  const { userId, companyId, error } = await requireActiveCompany();
   if (error) return error;
 
   const { searchParams } = new URL(req.url);
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
   const clients = await prisma.client.findMany({
     where: {
-      userId,
+      companyId,
       ...(q ? { OR: [
         { name: { contains: q, mode: "insensitive" } },
         { cui:  { contains: q, mode: "insensitive" } },
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { userId, error } = await requireUserId();
+  const { userId, companyId, error } = await requireActiveCompany();
   if (error) return error;
 
   const body = await req.json();
@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
   const client = await prisma.client.create({
     data: {
       userId,
+      companyId,
       name:     body.name,
       cui:      body.cui      ?? null,
       address:  body.address  ?? null,

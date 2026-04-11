@@ -10,11 +10,11 @@ import CompanyForm from "@/components/CompanyForm";
 import { requirePageSession } from "@/lib/session";
 
 export default async function CompaniesPage() {
-  const userId = await requirePageSession();
-  const companies = await prisma.company.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-  });
+  const { companyId } = await requirePageSession();
+
+  const company = companyId
+    ? await prisma.company.findUnique({ where: { id: companyId } })
+    : null;
 
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto">
@@ -26,7 +26,7 @@ export default async function CompaniesPage() {
         </div>
       </div>
 
-      <CompanyForm existing={companies[0] ?? null} />
+      <CompanyForm existing={company ?? null} />
     </div>
   );
 }

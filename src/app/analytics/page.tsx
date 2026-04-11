@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 import { requirePageSession } from "@/lib/session";
 import { formatCurrency } from "@/lib/calculations";
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle2, Users, Package } from "lucide-react";
@@ -27,12 +28,14 @@ function trendIcon(pct: number) {
 // ── page ────────────────────────────────────────────────────────────────────
 
 export default async function AnalyticsPage() {
-  const userId = await requirePageSession();
+  const { companyId } = await requirePageSession();
   const now = new Date();
+
+  if (!companyId) redirect("/onboarding");
 
   // Fetch all non-cancelled invoices
   const invoices = await prisma.invoice.findMany({
-    where: { userId, status: { not: "CANCELLED" } },
+    where: { companyId, status: { not: "CANCELLED" } },
     include: { client: { select: { id: true, name: true } } },
     orderBy: { issueDate: "asc" },
   });
@@ -72,7 +75,7 @@ export default async function AnalyticsPage() {
 
   // ── Invoice funnel ────────────────────────────────────────────────────────
 
-  const allInvoices = await prisma.invoice.findMany({ where: { userId } });
+  const allInvoices = await prisma.invoice.findMany({ where: { companyId } });
   const funnelSent      = allInvoices.filter((i) => i.status === "SENT").length;
   const funnelPaid      = allInvoices.filter((i) => i.status === "PAID").length;
   const funnelCancelled = allInvoices.filter((i) => i.status === "CANCELLED").length;
@@ -150,7 +153,7 @@ export default async function AnalyticsPage() {
   const serviceItems = await prisma.invoiceItem.findMany({
     where: {
       invoice: {
-        userId,
+        companyId,
         status: { in: ["PAID", "SENT"] },
       },
     },
