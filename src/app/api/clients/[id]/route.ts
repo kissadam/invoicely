@@ -3,17 +3,17 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireUserId } from "@/lib/session";
+import { requireActiveCompany } from "@/lib/session";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { userId, error } = await requireUserId();
+  const { companyId, error } = await requireActiveCompany();
   if (error) return error;
 
   const existing = await prisma.client.findFirst({
-    where: { id: params.id, userId },
+    where: { id: params.id, companyId },
   });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -37,11 +37,11 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { userId, error } = await requireUserId();
+  const { companyId, error } = await requireActiveCompany();
   if (error) return error;
 
   const existing = await prisma.client.findFirst({
-    where: { id: params.id, userId },
+    where: { id: params.id, companyId },
     include: { _count: { select: { invoices: true } } },
   });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });

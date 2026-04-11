@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus, FileDown } from "lucide-react";
 import InvoicesTable from "@/components/InvoicesTable";
@@ -9,12 +10,14 @@ import { cookies } from "next/headers";
 import { getT } from "@/lib/i18n";
 
 export default async function InvoicesPage() {
-  const userId = await requirePageSession();
+  const { companyId } = await requirePageSession();
   const locale = cookies().get("locale")?.value;
   const t = getT(locale);
 
+  if (!companyId) redirect("/onboarding");
+
   const invoices = await prisma.invoice.findMany({
-    where: { userId },
+    where: { companyId },
     include: { client: { select: { name: true, cui: true, vatPayer: true } } },
     orderBy: { createdAt: "desc" },
   });

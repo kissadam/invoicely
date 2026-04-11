@@ -4,6 +4,7 @@ import { Toaster } from "react-hot-toast";
 import AppShell from "@/components/layout/AppShell";
 import Providers from "@/components/layout/Providers";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "Invoicely — Facturare România",
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           />
         </Providers>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

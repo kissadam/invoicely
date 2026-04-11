@@ -2,18 +2,19 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
- * GET  /api/invoices  — list invoices
- * POST /api/invoices  — create invoice
+ * GET  /api/invoices  — list invoices for active company
+ * POST /api/invoices  — create invoice (enforces monthly limit)
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { computeInvoice, generateInvoiceNumber } from "@/lib/calculations";
-import { requireUserId } from "@/lib/session";
+import { requireActiveCompany } from "@/lib/session";
+import { getPlanLimits } from "@/lib/plans";
 import type { InvoiceItemForm } from "@/types/invoice";
 
 export async function GET(req: NextRequest) {
-  const { userId, error } = await requireUserId();
+  const { companyId, error } = await requireActiveCompany();
   if (error) return error;
 
   const { searchParams } = new URL(req.url);
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
   const limit  = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 100);
 
   const where = {
-    userId,
+    companyId,
     ...(status ? { status: status as "DRAFT" | "SENT" | "PAID" | "CANCELLED" } : {}),
   };
 
@@ -44,8 +45,25 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { userId, error } = await requireUserId();
+  const { userId, companyId, plan, error } = await requireActiveCompany();
   if (error) return error;
+
+  // ── Monthly invoice limit check ──────────────────────────────────────────
+  const limits = getPlanLimits(plan);
+  if (limits.invoicesPerMonth !== Infinity) {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const monthCount = await prisma.invoice.count({
+      where: { companyId, createdAt: { gte: startOfMonth } },
+    });
+    if (monthCount >= limits.invoicesPerMonth) {
+      return NextResponse.json(
+        { error: `Ai atins limita de ${limits.invoicesPerMonth} facturi/lună pentru planul Free. Fă upgrade la Pro pentru facturi nelimitate.` },
+        { status: 403 }
+      );
+    }
+  }
 
   let body: {
     clientId: string;
@@ -87,7 +105,7 @@ export async function POST(req: NextRequest) {
   let number = body.invoiceNumber?.trim();
   if (!number) {
     const year  = new Date().getFullYear();
-    const count = await prisma.invoice.count({ where: { userId } });
+    const count = await prisma.invoice.count({ where: { companyId } });
     number = generateInvoiceNumber(year, count + 1);
   }
   const { items: computedItems, totals } = computeInvoice(body.items, body.exchangeRate, vatRate);
@@ -97,7 +115,7 @@ export async function POST(req: NextRequest) {
       number,
       userId,
       clientId:       body.clientId,
-      companyId:      body.companyId,
+      companyId,
       templateId:     body.templateId,
       status:         "SENT",
       currency:       body.currency ?? "RON",

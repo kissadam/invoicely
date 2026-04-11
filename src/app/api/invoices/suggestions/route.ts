@@ -8,19 +8,18 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireUserId } from "@/lib/session";
+import { requireActiveCompany } from "@/lib/session";
 
 export async function GET(req: NextRequest) {
-  const { userId, error } = await requireUserId();
+  const { companyId, error } = await requireActiveCompany();
   if (error) return error;
 
   const clientId = new URL(req.url).searchParams.get("clientId");
   if (!clientId) return NextResponse.json({ suggestions: [] });
 
-  // Fetch all items from invoices issued to this client (most recent first)
   const items = await prisma.invoiceItem.findMany({
     where: {
-      invoice: { userId, clientId, status: { not: "CANCELLED" } },
+      invoice: { companyId, clientId, status: { not: "CANCELLED" } },
     },
     select: { name: true, unit: true, quantity: true, priceEur: true },
     orderBy: { invoice: { issueDate: "desc" } },
@@ -28,7 +27,6 @@ export async function GET(req: NextRequest) {
 
   if (items.length === 0) return NextResponse.json({ suggestions: [] });
 
-  // Group by normalised name → pick most common unit + avg price + avg qty
   const map = new Map<string, { name: string; unit: string; priceSum: number; qtySum: number; count: number }>();
   for (const item of items) {
     const key = item.name.trim().toLowerCase();

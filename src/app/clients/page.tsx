@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 import { Users } from "lucide-react";
 import AddClientForm from "@/components/AddClientForm";
 import ClientsTable from "@/components/ClientsTable";
@@ -9,12 +10,14 @@ import { cookies } from "next/headers";
 import { getT } from "@/lib/i18n";
 
 export default async function ClientsPage() {
-  const userId = await requirePageSession();
+  const { companyId } = await requirePageSession();
   const locale = cookies().get("locale")?.value;
   const t = getT(locale);
 
+  if (!companyId) redirect("/onboarding");
+
   const clients = await prisma.client.findMany({
-    where: { userId },
+    where: { companyId },
     include: { _count: { select: { invoices: true } } },
     orderBy: { name: "asc" },
   });
