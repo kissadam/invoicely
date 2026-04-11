@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import SupportModal from "./SupportModal";
+import CompanySwitcher from "./CompanySwitcher";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const NAV_ITEMS = [
@@ -40,6 +41,11 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       <div className="px-5 py-5 border-b border-slate-100 dark:border-slate-700">
         <span className="text-lg font-bold text-blue-600">Invoicely</span>
         <span className="ml-1 text-xs text-slate-400 font-medium">RO</span>
+      </div>
+
+      {/* Company switcher */}
+      <div className="border-b border-slate-100 dark:border-slate-700">
+        <CompanySwitcher />
       </div>
 
       {/* Nav */}

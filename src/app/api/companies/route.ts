@@ -10,11 +10,19 @@ export async function GET() {
   const { userId, error } = await requireUserId();
   if (error) return error;
 
-  const companies = await prisma.company.findMany({
-    where: { userId },
-    orderBy: { createdAt: "asc" },
-  });
-  return NextResponse.json(companies);
+  const [companies, user] = await Promise.all([
+    prisma.company.findMany({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, cui: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { activeCompanyId: true },
+    }),
+  ]);
+
+  return NextResponse.json({ companies, activeCompanyId: user?.activeCompanyId ?? null });
 }
 
 export async function POST(req: NextRequest) {

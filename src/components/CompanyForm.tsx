@@ -7,6 +7,7 @@ import type { Company } from "@prisma/client";
 
 interface Props {
   existing: Company | null;
+  onSaved?: (id: string) => void;
 }
 
 const EMPTY = {
@@ -14,7 +15,7 @@ const EMPTY = {
   phone: "", email: "", vatPayer: false, vatRate: "",
 };
 
-export default function CompanyForm({ existing }: Props) {
+export default function CompanyForm({ existing, onSaved }: Props) {
   const [savedId, setSavedId] = useState<string | null>(existing?.id ?? null);
   const [form, setForm] = useState({
     cui:      existing?.cui      ?? "",
@@ -75,7 +76,10 @@ export default function CompanyForm({ existing }: Props) {
       let data: Record<string, unknown> = {};
       try { data = await res.json(); } catch { /* empty body */ }
       if (!res.ok) throw new Error((data.error as string) ?? `Eroare la salvare (${res.status})`);
-      if (!savedId) setSavedId(data.id as string);
+      if (!savedId) {
+        setSavedId(data.id as string);
+        onSaved?.(data.id as string);
+      }
       toast.success("Compania a fost salvată");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Eroare la salvare");
