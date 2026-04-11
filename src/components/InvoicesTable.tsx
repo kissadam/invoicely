@@ -64,7 +64,7 @@ export default function InvoicesTable({ initial }: { initial: Invoice[] }) {
                 {inv.number}
               </Link>
             </td>
-            <td className="px-6 py-4">
+            <td className="px-6 py-4 break-words">
               <div className="font-medium text-slate-800 dark:text-slate-200">{inv.client.name}</div>
               {inv.client.cui && <div className="text-xs text-slate-400">{inv.client.vatPayer ? `RO${inv.client.cui.replace(/^RO/i, "")}` : inv.client.cui}</div>}
             </td>

@@ -128,7 +128,7 @@ export default async function DashboardPage() {
                       {inv.number}
                     </Link>
                   </td>
-                  <td className="px-6 py-3 text-slate-700 dark:text-slate-300">{inv.client.name}</td>
+                  <td className="px-6 py-3 text-slate-700 dark:text-slate-300 break-words">{inv.client.name}</td>
                   <td className="px-6 py-3 text-slate-500">
                     {new Date(inv.issueDate).toLocaleDateString(locale === "ro" ? "ro-RO" : "en-GB")}
                   </td>

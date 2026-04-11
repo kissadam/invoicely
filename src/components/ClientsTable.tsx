@@ -101,9 +101,9 @@ export default function ClientsTable({ initial }: { initial: Client[] }) {
         <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
           {clients.map((c) => (
             <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors">
-              <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-200 max-w-[180px] truncate">{c.name}</td>
+              <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-200 break-words max-w-[180px]">{c.name}</td>
               <td className="px-5 py-3 text-slate-500 font-mono text-xs whitespace-nowrap">{c.cui ? (c.vatPayer ? `RO${c.cui.replace(/^RO/i, "")}` : c.cui) : "—"}</td>
-              <td className="px-5 py-3 text-slate-400 text-xs hidden md:table-cell max-w-[200px] truncate">{c.address ?? "—"}</td>
+              <td className="px-5 py-3 text-slate-400 text-xs hidden md:table-cell break-words max-w-[200px]">{c.address ?? "—"}</td>
               <td className="px-5 py-3 text-center hidden lg:table-cell">
                 <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 font-mono">
                   {c.currency ?? "RON"}

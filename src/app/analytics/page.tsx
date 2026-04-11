@@ -538,7 +538,7 @@ export default async function AnalyticsPage() {
                 <div key={i} className="px-6 py-3">
                   <div className="flex items-center gap-4 mb-1.5">
                     <span className="text-xs text-slate-400 w-4 shrink-0">{i + 1}.</span>
-                    <span className="text-sm font-medium text-slate-700 flex-1 truncate">{c.name}</span>
+                    <span className="text-sm font-medium text-slate-700 flex-1 min-w-0 break-words">{c.name}</span>
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
                     <span className="text-sm font-bold text-slate-900 tabular-nums w-20 text-right">{c.avgDso} zile</span>
                     <span className="text-xs text-slate-400 w-12 text-right shrink-0">{c.count} fact.</span>
@@ -620,7 +620,7 @@ export default async function AnalyticsPage() {
                     <div className="flex items-center justify-between mb-1 gap-2">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span className="text-xs text-slate-400 w-4 shrink-0">{i + 1}.</span>
-                        <span className="text-sm font-medium text-slate-700 truncate">{s.name}</span>
+                        <span className="text-sm font-medium text-slate-700 break-words">{s.name}</span>
                       </div>
                       <div className="shrink-0 text-right">
                         <span className="text-sm font-semibold text-slate-900 tabular-nums">{formatCurrency(s.total, "RON")}</span>
@@ -654,7 +654,7 @@ export default async function AnalyticsPage() {
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-xs text-slate-400 w-4 shrink-0">{i + 1}.</span>
-                        <span className="text-sm font-medium text-slate-700 truncate">{c.name}</span>
+                        <span className="text-sm font-medium text-slate-700 break-words">{c.name}</span>
                         <span className="text-xs text-slate-400 shrink-0">{c.count} fact.</span>
                       </div>
                       <div className="text-right shrink-0 ml-3">
@@ -833,7 +833,7 @@ export default async function AnalyticsPage() {
               {atRiskClients.slice(0, 8).map((c, i) => (
                 <div key={i} className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-700 truncate">{c.name}</p>
+                    <p className="text-sm font-medium text-slate-700 break-words">{c.name}</p>
                     <p className="text-xs text-slate-400">ultimă factură acum {c.daysSince} zile</p>
                   </div>
                   <div className="shrink-0 text-right">
@@ -1048,7 +1048,7 @@ export default async function AnalyticsPage() {
                     <div key={r.rank}>
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="text-xs text-slate-400 w-4 shrink-0">{r.rank}.</span>
-                        <span className="text-xs font-medium text-slate-700 flex-1 truncate">{r.name}</span>
+                        <span className="text-xs font-medium text-slate-700 flex-1 min-w-0 break-words">{r.name}</span>
                         <span className="text-xs text-slate-500 tabular-nums">{r.ownPct.toFixed(1)}%</span>
                         <span className={`text-xs font-semibold tabular-nums w-12 text-right ${r.cumulativePct >= 80 ? "text-slate-400" : "text-blue-600"}`}>
                           {r.cumulativePct.toFixed(0)}%
