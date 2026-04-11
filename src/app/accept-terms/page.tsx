@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import AcceptTermsClient from "./AcceptTermsClient";
 
 export default async function AcceptTermsPage() {
-  const userId = await requirePageSession({ skipTerms: true });
+  const { userId } = await requirePageSession({ skipTerms: true });
 
   // Already accepted — send to dashboard
   const user = await prisma.user.findUnique({
