@@ -401,7 +401,7 @@ export default function InvoiceEditor({
         <div className="space-y-6">
 
           {/* Client + Currency */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
               <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Client</h2>
               <ClientSearch value={client} onChange={setClient} initialQuery={initialClientQuery} />
@@ -451,7 +451,7 @@ export default function InvoiceEditor({
           {/* Dates */}
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Date factură</h2>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Field label="Număr factură">
                 <input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder="Auto (INV-2026-001)" className={inputClass} />
               </Field>
@@ -481,8 +481,9 @@ export default function InvoiceEditor({
               </div>
             </div>
 
+            <div className="overflow-x-auto">
             <div
-              className="grid gap-2 px-4 py-2 bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-100"
+              className="min-w-[600px] grid gap-2 px-4 py-2 bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-100"
               style={{ gridTemplateColumns: ["28px", "minmax(160px,2fr)", "50px", "60px", "100px", "100px", ...(needsRate ? ["100px"] : []), ...(vatEnabled ? ["80px", "100px"] : []), "28px"].join(" ") }}
             >
               <span className="text-center">Nr.</span>
@@ -509,6 +510,7 @@ export default function InvoiceEditor({
                 onRemove={items.length > 1 ? () => removeItem(idx) : undefined}
               />
             ))}
+            </div>
 
             {/* Totals */}
             <div className="flex justify-end px-5 py-5 border-t border-slate-200 bg-slate-50">
@@ -540,7 +542,7 @@ export default function InvoiceEditor({
           </div>
 
           {/* Notes & footer */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Mențiuni</label>
               <textarea

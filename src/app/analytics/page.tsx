@@ -436,7 +436,7 @@ export default async function AnalyticsPage() {
   const TrendIcon = trend.icon;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-8">
 
       {/* ── Header ── */}
       <div>
@@ -445,7 +445,7 @@ export default async function AnalyticsPage() {
       </div>
 
       {/* ── KPI Cards ── */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard
           label="Încasat"
           value={formatCurrency(totalCollected, "RON")}
@@ -500,7 +500,7 @@ export default async function AnalyticsPage() {
 
       {/* ── Forecast ── */}
       {(pipelineTotal > 0 || last3Avg > 0) && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl border border-slate-200 p-5">
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Medie lunară (3 luni)</p>
             <p className="text-2xl font-bold text-slate-900 tabular-nums">{formatCurrency(Math.round(last3Avg), "RON")}</p>
@@ -555,7 +555,7 @@ export default async function AnalyticsPage() {
 
       {/* ── Distribuție valori facturi + Starea facturilor ── */}
       {billed.length > 0 && (
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Invoice size distribution */}
           <div className="bg-white rounded-xl border border-slate-200 p-6">
@@ -600,7 +600,7 @@ export default async function AnalyticsPage() {
       )}
 
       {/* ── Servicii facturate + Top clienți ── */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         {/* Services */}
         <div className="bg-white rounded-xl border border-slate-200 p-6">
@@ -718,7 +718,7 @@ export default async function AnalyticsPage() {
       {currencyRows.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-200 p-6">
           <h2 className="text-sm font-semibold text-slate-800 mb-5">Structură pe monede</h2>
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {currencyRows.map((r) => {
               const pct = (r.totalRon / currencyMax) * 100;
               return (
@@ -748,7 +748,8 @@ export default async function AnalyticsPage() {
             <h2 className="text-sm font-semibold text-slate-800">Facturi restante — detaliu</h2>
             <span className="ml-auto text-xs text-slate-400">{overdueDetails.length} {overdueDetails.length === 1 ? "factură" : "facturi"} neîncasate</span>
           </div>
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[500px]">
             <thead className="bg-red-50/50 border-b border-red-50">
               <tr className="text-xs text-slate-500 uppercase tracking-wide">
                 <th className="px-6 py-3 text-left font-semibold">Factură</th>
@@ -780,12 +781,13 @@ export default async function AnalyticsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
       {/* ── Run rate ── */}
       {last3Avg > 0 && (
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-xl border border-slate-200 p-5">
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Run rate anual</p>
             <p className="text-2xl font-bold text-slate-900 tabular-nums">{formatCurrency(runRate, "RON")}</p>
@@ -812,7 +814,7 @@ export default async function AnalyticsPage() {
       )}
 
       {/* ── At-risk clients + Payment punctuality ── */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         {/* At-risk clients */}
         <div className="bg-white rounded-xl border border-slate-200 p-6">
@@ -890,7 +892,7 @@ export default async function AnalyticsPage() {
       </div>
 
       {/* ── New vs returning clients + Revenue heatmap ── */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         {/* New vs returning clients */}
         <div className="bg-white rounded-xl border border-slate-200 p-6">
@@ -991,7 +993,7 @@ export default async function AnalyticsPage() {
 
       {/* ── Avg invoice value trend + Pareto concentration ── */}
       {billed.length > 0 && (
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Avg invoice value trend */}
           <div className="bg-white rounded-xl border border-slate-200 p-6">

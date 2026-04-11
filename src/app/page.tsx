@@ -52,7 +52,7 @@ export default async function DashboardPage() {
   const totalRon = Number(stats.total._sum.totalRon ?? 0);
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -68,7 +68,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <StatCard
           icon={<TrendingUp size={20} className="text-blue-600" />}
           label={t.dashboard.totalInvoiced}
@@ -109,7 +109,8 @@ export default async function DashboardPage() {
             <Link href="/invoices/new" className="text-blue-600 hover:underline">{t.dashboard.createFirst}</Link>.
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[500px]">
             <thead>
               <tr className="text-xs text-slate-500 border-b border-slate-100 dark:border-slate-700">
                 <th className="px-6 py-3 text-left font-medium">{t.dashboard.number}</th>
@@ -143,6 +144,7 @@ export default async function DashboardPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

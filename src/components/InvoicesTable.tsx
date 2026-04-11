@@ -50,7 +50,7 @@ export default function InvoicesTable({ initial }: { initial: Invoice[] }) {
           <th className="px-6 py-3 text-left font-semibold">{t.invoices.number}</th>
           <th className="px-6 py-3 text-left font-semibold">{t.invoices.client}</th>
           <th className="px-6 py-3 text-left font-semibold">{t.invoices.issueDate}</th>
-          <th className="px-6 py-3 text-right font-semibold">EUR</th>
+          <th className="px-6 py-3 text-right font-semibold hidden sm:table-cell">EUR</th>
           <th className="px-6 py-3 text-right font-semibold">RON</th>
           <th className="px-6 py-3 text-center font-semibold">{t.invoices.status}</th>
           <th className="px-6 py-3 text-center font-semibold w-28">{t.invoices.actions}</th>
@@ -71,7 +71,7 @@ export default function InvoicesTable({ initial }: { initial: Invoice[] }) {
             <td className="px-6 py-4 text-slate-500">
               {new Date(inv.issueDate).toLocaleDateString(locale === "ro" ? "ro-RO" : "en-GB")}
             </td>
-            <td className="px-6 py-4 text-right text-slate-700 dark:text-slate-300">
+            <td className="px-6 py-4 text-right text-slate-700 dark:text-slate-300 hidden sm:table-cell">
               {formatCurrency(Number(inv.totalEur), "EUR")}
             </td>
             <td className="px-6 py-4 text-right font-semibold text-slate-900 dark:text-white">

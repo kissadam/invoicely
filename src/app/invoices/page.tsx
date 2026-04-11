@@ -20,7 +20,7 @@ export default async function InvoicesPage() {
   });
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">{t.invoices.title}</h1>
@@ -44,7 +44,9 @@ export default async function InvoicesPage() {
             </Link>
           </div>
         ) : (
-          <InvoicesTable initial={invoices} />
+          <div className="overflow-x-auto">
+            <InvoicesTable initial={invoices} />
+          </div>
         )}
       </div>
     </div>
