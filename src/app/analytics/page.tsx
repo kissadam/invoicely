@@ -45,12 +45,14 @@ export default async function AnalyticsPage() {
 
   const paid     = invoices.filter((i) => i.status === "PAID");
   const billed   = invoices.filter((i) => i.status === "SENT" || i.status === "PAID");
+  const unpaid   = invoices.filter((i) => i.status === "SENT");
   const overdue  = invoices.filter(
     (i) => i.status === "SENT" && i.dueDate && new Date(i.dueDate) < now
   );
 
   const totalCollected = paid.reduce((s, i) => s + effectiveTotal(i), 0);
   const totalBilled    = billed.reduce((s, i) => s + effectiveTotal(i), 0);
+  const totalUnpaid    = unpaid.reduce((s, i) => s + effectiveTotal(i), 0);
   const totalOverdue   = overdue.reduce((s, i) => s + effectiveTotal(i), 0);
 
   // DSO — avg days from issue to updatedAt for paid invoices
@@ -458,14 +460,14 @@ export default async function AnalyticsPage() {
         <KpiCard
           label="Facturat (total)"
           value={formatCurrency(totalBilled, "RON")}
-          sub={<span className="text-xs text-slate-400">{billed.length} facturi emise</span>}
+          sub={<span className="text-xs text-slate-400">{allInvoices.filter(i => i.status !== "CANCELLED").length} facturi emise</span>}
           accent="blue"
         />
         <KpiCard
-          label="Restanțe"
-          value={formatCurrency(totalOverdue, "RON")}
-          sub={<span className="text-xs text-slate-400">{overdue.length} {overdue.length === 1 ? "factură" : "facturi"} neîncasate</span>}
-          accent={totalOverdue > 0 ? "red" : "slate"}
+          label="De încasat"
+          value={formatCurrency(totalUnpaid, "RON")}
+          sub={<span className="text-xs text-slate-400">{unpaid.length} {unpaid.length === 1 ? "factură neîncasată" : "facturi neîncasate"}{overdue.length > 0 ? `, ${overdue.length} restante` : ""}</span>}
+          accent={totalUnpaid > 0 ? "red" : "slate"}
         />
         <KpiCard
           label="DSO mediu"

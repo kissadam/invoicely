@@ -121,9 +121,9 @@ export function parseInvoicePrompt(input: string): ParsedInvoice {
   const serviceRaw = t3.replace(/\s+/g, " ").trim();
   const description = professionalDescription(serviceRaw || input);
 
-  // VAT: default 19% (Romanian client). If client name looks foreign (contains Ltd/Inc/GmbH etc.), 0%
+  // VAT: default 21% (Romanian client). If client name looks foreign (contains Ltd/Inc/GmbH etc.), 0%
   const foreignIndicators = /\b(ltd|inc|llc|gmbh|sas|srl\b.*\b(?:fr|de|uk|es|it)|bv|ab|oy)\b/i;
-  const vatRate = foreignIndicators.test(clientName) ? 0 : 19;
+  const vatRate = foreignIndicators.test(clientName) ? 0 : 21;
 
   const vatNote = vatRate === 0
     ? "Taxare inversă – TVA 0% (reverse charge) conform art. 278 Codul Fiscal."

@@ -87,9 +87,9 @@ export default function InvoiceEditor({
   // Client
   const [client, setClient] = useState<SelectedClient | null>(initialData?.client ?? null);
 
-  // VAT — driven by MY company being a VAT payer, standard Romanian rate 19%
+  // VAT — driven by MY company being a VAT payer, standard Romanian rate 21%
   const vatEnabled = !!company?.vatPayer;
-  const vatRate = 19;
+  const vatRate = 21;
 
   // Currency
   const [currency, setCurrency] = useState(() => {
