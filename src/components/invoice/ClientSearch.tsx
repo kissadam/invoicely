@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Loader2, Building2, Plus } from "lucide-react";
+import { Search, Loader2, Building2, Plus, UserPlus } from "lucide-react";
 import toast from "react-hot-toast";
+import NewClientModal from "./NewClientModal";
 
 export interface SelectedClient {
   id?: string;
@@ -33,6 +34,7 @@ export default function ClientSearch({ value, onChange, initialQuery }: Props) {
   const [filtered, setFiltered] = useState<SavedClient[]>([]);
   const [open, setOpen] = useState(false);
   const [anafLoading, setAnafLoading] = useState(false);
+  const [newClientOpen, setNewClientOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Load all saved clients once
@@ -182,7 +184,27 @@ export default function ClientSearch({ value, onChange, initialQuery }: Props) {
               Caută „{query.trim()}" în ANAF
             </button>
           )}
+          <button
+            onMouseDown={(e) => { e.preventDefault(); setOpen(false); setNewClientOpen(true); }}
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-colors border-t border-slate-100 dark:border-slate-700 font-medium"
+          >
+            <UserPlus size={14} />
+            {query.trim() ? `Adaugă „${query.trim()}" ca client nou` : "Adaugă client nou"}
+          </button>
         </div>
+      )}
+
+      {newClientOpen && (
+        <NewClientModal
+          initialName={query.trim()}
+          onClose={() => setNewClientOpen(false)}
+          onSaved={(client) => {
+            onChange(client);
+            setQuery(client.name);
+            setSaved((prev) => [...prev, { id: client.id, name: client.name, cui: client.cui || null, address: client.address || null, vatPayer: client.vatPayer, currency: "RON" }]);
+            setNewClientOpen(false);
+          }}
+        />
       )}
 
       {/* Selected client card */}

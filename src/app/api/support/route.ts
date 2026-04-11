@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
 
   const data = await res.json();
   if (!data.success) {
-    console.error("Web3Forms error:", data);
-    return NextResponse.json({ error: "Eroare la trimitere" }, { status: 502 });
+    console.error("Web3Forms error:", JSON.stringify(data));
+    return NextResponse.json({ error: data.message ?? "Eroare la trimitere" }, { status: 502 });
   }
 
   return NextResponse.json({ ok: true });
