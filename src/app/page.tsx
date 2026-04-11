@@ -1,15 +1,13 @@
 export const dynamic = "force-dynamic";
 
-/**
- * Dashboard — shows key metrics and recent invoices
- */
-
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Plus, TrendingUp, FileText, Users, Clock } from "lucide-react";
 import { formatCurrency } from "@/lib/calculations";
 import { requirePageSession } from "@/lib/session";
+import { cookies } from "next/headers";
+import { getT } from "@/lib/i18n";
 
 async function getStats(userId: string) {
   const [total, unpaid, paid, clients] = await Promise.all([
@@ -41,12 +39,10 @@ const STATUS_STYLES: Record<string, string> = {
   CANCELLED: "bg-red-100 text-red-600",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  DRAFT: "Neîncasată", SENT: "Neîncasată", PAID: "Plătită", CANCELLED: "Anulată",
-};
-
 export default async function DashboardPage() {
   const userId = await requirePageSession();
+  const locale = cookies().get("locale")?.value;
+  const t = getT(locale);
 
   const company = await prisma.company.findFirst({ where: { userId } });
   if (!company) redirect("/onboarding");
@@ -60,14 +56,14 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-sm text-slate-500 mt-1">Bun venit! Gestionați facturile companiei.</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t.dashboard.title}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t.dashboard.subtitle}</p>
         </div>
         <Link
           href="/invoices/new"
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
         >
-          <Plus size={16} /> Factură nouă
+          <Plus size={16} /> {t.dashboard.newInvoice}
         </Link>
       </div>
 
@@ -75,25 +71,25 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-4 gap-4 mb-8">
         <StatCard
           icon={<TrendingUp size={20} className="text-blue-600" />}
-          label="Total facturi (RON)"
+          label={t.dashboard.totalInvoiced}
           value={formatCurrency(totalRon, "RON")}
           bg="bg-blue-50"
         />
         <StatCard
           icon={<FileText size={20} className="text-slate-600" />}
-          label="Total facturi"
+          label={t.dashboard.totalInvoices}
           value={String(stats.total._count)}
           bg="bg-slate-50"
         />
         <StatCard
           icon={<Clock size={20} className="text-amber-600" />}
-          label="Neîncasate"
+          label={t.dashboard.unpaid}
           value={String(stats.unpaid)}
           bg="bg-amber-50"
         />
         <StatCard
           icon={<Users size={20} className="text-green-600" />}
-          label="Clienți"
+          label={t.dashboard.clients}
           value={String(stats.clients)}
           bg="bg-green-50"
         />
@@ -102,24 +98,25 @@ export default async function DashboardPage() {
       {/* Recent invoices */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
-          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Facturi recente</h2>
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t.dashboard.recentInvoices}</h2>
           <Link href="/invoices" className="text-xs text-blue-600 hover:underline">
-            Vezi toate →
+            {t.dashboard.viewAll}
           </Link>
         </div>
         {recent.length === 0 ? (
           <div className="px-6 py-12 text-center text-slate-400 text-sm">
-            Nicio factură. <Link href="/invoices/new" className="text-blue-600 hover:underline">Creați prima factură</Link>.
+            {t.dashboard.noInvoices}{" "}
+            <Link href="/invoices/new" className="text-blue-600 hover:underline">{t.dashboard.createFirst}</Link>.
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs text-slate-500 border-b border-slate-100 dark:border-slate-700">
-                <th className="px-6 py-3 text-left font-medium">Număr</th>
-                <th className="px-6 py-3 text-left font-medium">Client</th>
-                <th className="px-6 py-3 text-left font-medium">Dată</th>
-                <th className="px-6 py-3 text-right font-medium">Total RON</th>
-                <th className="px-6 py-3 text-center font-medium">Status</th>
+                <th className="px-6 py-3 text-left font-medium">{t.dashboard.number}</th>
+                <th className="px-6 py-3 text-left font-medium">{t.dashboard.client}</th>
+                <th className="px-6 py-3 text-left font-medium">{t.dashboard.date}</th>
+                <th className="px-6 py-3 text-right font-medium">{t.dashboard.totalRon}</th>
+                <th className="px-6 py-3 text-center font-medium">{t.dashboard.status}</th>
               </tr>
             </thead>
             <tbody>
@@ -132,14 +129,14 @@ export default async function DashboardPage() {
                   </td>
                   <td className="px-6 py-3 text-slate-700 dark:text-slate-300">{inv.client.name}</td>
                   <td className="px-6 py-3 text-slate-500">
-                    {new Date(inv.issueDate).toLocaleDateString("ro-RO")}
+                    {new Date(inv.issueDate).toLocaleDateString(locale === "ro" ? "ro-RO" : "en-GB")}
                   </td>
                   <td className="px-6 py-3 text-right font-medium text-slate-800 dark:text-slate-200">
                     {formatCurrency(Number(inv.totalRon), "RON")}
                   </td>
                   <td className="px-6 py-3 text-center">
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[inv.status]}`}>
-                      {STATUS_LABELS[inv.status]}
+                      {t.status[inv.status as keyof typeof t.status] ?? inv.status}
                     </span>
                   </td>
                 </tr>

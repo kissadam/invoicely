@@ -1,17 +1,18 @@
 export const dynamic = "force-dynamic";
 
-/**
- * Clients list page
- */
-
 import { prisma } from "@/lib/prisma";
 import { Users } from "lucide-react";
 import AddClientForm from "@/components/AddClientForm";
 import ClientsTable from "@/components/ClientsTable";
 import { requirePageSession } from "@/lib/session";
+import { cookies } from "next/headers";
+import { getT } from "@/lib/i18n";
 
 export default async function ClientsPage() {
   const userId = await requirePageSession();
+  const locale = cookies().get("locale")?.value;
+  const t = getT(locale);
+
   const clients = await prisma.client.findMany({
     where: { userId },
     include: { _count: { select: { invoices: true } } },
@@ -22,8 +23,8 @@ export default async function ClientsPage() {
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Clienți</h1>
-          <p className="text-sm text-slate-500 mt-1">{clients.length} clienți înregistrați</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t.clients.title}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t.clients.countLabel(clients.length)}</p>
         </div>
         <AddClientForm />
       </div>
@@ -32,7 +33,7 @@ export default async function ClientsPage() {
         {clients.length === 0 ? (
           <div className="py-20 text-center text-slate-400">
             <Users size={40} className="mx-auto mb-3 opacity-30" />
-            <p className="text-sm">Niciun client. Adăugați unul cu butonul de mai sus.</p>
+            <p className="text-sm">{t.clients.noClients}</p>
           </div>
         ) : (
           <ClientsTable initial={clients} />

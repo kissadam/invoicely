@@ -1,17 +1,18 @@
 export const dynamic = "force-dynamic";
 
-/**
- * Invoices list page
- */
-
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Plus, FileDown } from "lucide-react";
 import InvoicesTable from "@/components/InvoicesTable";
 import { requirePageSession } from "@/lib/session";
+import { cookies } from "next/headers";
+import { getT } from "@/lib/i18n";
 
 export default async function InvoicesPage() {
   const userId = await requirePageSession();
+  const locale = cookies().get("locale")?.value;
+  const t = getT(locale);
+
   const invoices = await prisma.invoice.findMany({
     where: { userId },
     include: { client: { select: { name: true, cui: true, vatPayer: true } } },
@@ -22,14 +23,14 @@ export default async function InvoicesPage() {
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Facturi</h1>
-          <p className="text-sm text-slate-500 mt-1">{invoices.length} factură(i)</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t.invoices.title}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t.invoices.countLabel(invoices.length)}</p>
         </div>
         <Link
           href="/invoices/new"
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
         >
-          <Plus size={16} /> Factură nouă
+          <Plus size={16} /> {t.invoices.newInvoice}
         </Link>
       </div>
 
@@ -37,9 +38,9 @@ export default async function InvoicesPage() {
         {invoices.length === 0 ? (
           <div className="py-20 text-center text-slate-400">
             <FileDown size={40} className="mx-auto mb-3 opacity-30" />
-            <p className="text-sm">Nicio factură creată.</p>
+            <p className="text-sm">{t.invoices.noInvoices}</p>
             <Link href="/invoices/new" className="text-blue-600 hover:underline text-sm mt-1 inline-block">
-              Creați prima factură
+              {t.invoices.createFirst}
             </Link>
           </div>
         ) : (

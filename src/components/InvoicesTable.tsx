@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { FileDown, Copy, Trash2, Pencil } from "lucide-react";
 import { formatCurrency } from "@/lib/calculations";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Invoice {
   id: string;
@@ -23,24 +24,22 @@ const STATUS_STYLES: Record<string, string> = {
   PAID:      "bg-green-100 text-green-700",
   CANCELLED: "bg-red-100 text-red-600",
 };
-const STATUS_LABELS: Record<string, string> = {
-  DRAFT: "Neîncasată", SENT: "Neîncasată", PAID: "Plătită", CANCELLED: "Anulată",
-};
 
 export default function InvoicesTable({ initial }: { initial: Invoice[] }) {
   const router = useRouter();
+  const { t, locale } = useLanguage();
   const [invoices, setInvoices] = useState(initial);
 
   async function deleteInvoice(id: string, number: string) {
-    if (!confirm(`Ștergeți factura ${number}?`)) return;
+    if (!confirm(t.invoices.deleteConfirm(number))) return;
     const res = await fetch(`/api/invoices/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
-      toast.error(json.error ?? "Eroare la ștergere");
+      toast.error(json.error ?? t.invoices.deleteError);
       return;
     }
     setInvoices((prev) => prev.filter((inv) => inv.id !== id));
-    toast.success(`Factura ${number} a fost ștearsă`);
+    toast.success(t.invoices.deleteSuccess(number));
     router.refresh();
   }
 
@@ -48,13 +47,13 @@ export default function InvoicesTable({ initial }: { initial: Invoice[] }) {
     <table className="w-full text-sm">
       <thead className="bg-slate-50 dark:bg-slate-750 border-b border-slate-200 dark:border-slate-700">
         <tr className="text-xs text-slate-500 uppercase tracking-wide">
-          <th className="px-6 py-3 text-left font-semibold">Număr</th>
-          <th className="px-6 py-3 text-left font-semibold">Client</th>
-          <th className="px-6 py-3 text-left font-semibold">Emitere</th>
+          <th className="px-6 py-3 text-left font-semibold">{t.invoices.number}</th>
+          <th className="px-6 py-3 text-left font-semibold">{t.invoices.client}</th>
+          <th className="px-6 py-3 text-left font-semibold">{t.invoices.issueDate}</th>
           <th className="px-6 py-3 text-right font-semibold">EUR</th>
           <th className="px-6 py-3 text-right font-semibold">RON</th>
-          <th className="px-6 py-3 text-center font-semibold">Status</th>
-          <th className="px-6 py-3 text-center font-semibold w-28">Acțiuni</th>
+          <th className="px-6 py-3 text-center font-semibold">{t.invoices.status}</th>
+          <th className="px-6 py-3 text-center font-semibold w-28">{t.invoices.actions}</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -70,7 +69,7 @@ export default function InvoicesTable({ initial }: { initial: Invoice[] }) {
               {inv.client.cui && <div className="text-xs text-slate-400">{inv.client.vatPayer ? `RO${inv.client.cui.replace(/^RO/i, "")}` : inv.client.cui}</div>}
             </td>
             <td className="px-6 py-4 text-slate-500">
-              {new Date(inv.issueDate).toLocaleDateString("ro-RO")}
+              {new Date(inv.issueDate).toLocaleDateString(locale === "ro" ? "ro-RO" : "en-GB")}
             </td>
             <td className="px-6 py-4 text-right text-slate-700 dark:text-slate-300">
               {formatCurrency(Number(inv.totalEur), "EUR")}
@@ -80,7 +79,7 @@ export default function InvoicesTable({ initial }: { initial: Invoice[] }) {
             </td>
             <td className="px-6 py-4 text-center">
               <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[inv.status]}`}>
-                {STATUS_LABELS[inv.status]}
+                {t.status[inv.status as keyof typeof t.status] ?? inv.status}
               </span>
             </td>
             <td className="px-6 py-4 text-center">
@@ -89,7 +88,7 @@ export default function InvoicesTable({ initial }: { initial: Invoice[] }) {
                   <Link
                     href={`/invoices/${inv.id}`}
                     className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 transition-colors"
-                    title="Editează"
+                    title={t.invoices.editTitle}
                   >
                     <Pencil size={15} />
                   </Link>
@@ -99,21 +98,21 @@ export default function InvoicesTable({ initial }: { initial: Invoice[] }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 transition-colors"
-                  title="Descarcă PDF"
+                  title={t.invoices.downloadPdf}
                 >
                   <FileDown size={15} />
                 </a>
                 <Link
                   href={`/invoices/new?duplicate=${inv.id}`}
                   className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 transition-colors"
-                  title="Duplică"
+                  title={t.invoices.duplicateTitle}
                 >
                   <Copy size={15} />
                 </Link>
                 <button
                   onClick={() => deleteInvoice(inv.id, inv.number)}
                   className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950 text-slate-400 hover:text-red-500 transition-colors"
-                  title="Șterge"
+                  title={t.invoices.deleteTitle}
                 >
                   <Trash2 size={15} />
                 </button>
