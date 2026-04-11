@@ -156,7 +156,12 @@ export default function NewInvoiceFlow() {
             }}
             placeholder='ex: "Website design for Acme SRL 1200 EUR"'
             rows={2}
-            className="w-full px-4 py-3.5 pr-14 text-sm border border-slate-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none placeholder-slate-400"
+            className="w-full px-4 py-3.5 pr-14 text-sm border border-blue-300 rounded-xl resize-none placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-shadow duration-200"
+            style={{
+              boxShadow: "0 0 0 3px rgba(59,130,246,0.15), 0 1px 3px rgba(0,0,0,0.07)",
+            }}
+            onFocus={(e) => { e.currentTarget.style.boxShadow = "0 0 0 4px rgba(59,130,246,0.30), 0 1px 3px rgba(0,0,0,0.07)"; }}
+            onBlur={(e)  => { e.currentTarget.style.boxShadow = "0 0 0 3px rgba(59,130,246,0.15), 0 1px 3px rgba(0,0,0,0.07)"; }}
           />
           <button
             onClick={handleGenerate}

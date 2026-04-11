@@ -21,20 +21,43 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
   const [sent, setSent]               = useState(false);
   const [error, setError]             = useState("");
 
+  const typeLabel: Record<string, string> = {
+    issue:    "Problemă tehnică",
+    feedback: "Feedback",
+    question: "Întrebare",
+    other:    "Altele",
+  };
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSending(true);
     setError("");
     try {
-      const res = await fetch("/api/support", {
+      const key = process.env.NEXT_PUBLIC_WEB3FORMS_KEY;
+      if (!key) throw new Error("Support not configured");
+
+      const res = await fetch("https://api.web3forms.com/submit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, subject, description, name, email, phone }),
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          access_key: key,
+          subject:    `[Invoicely] ${typeLabel[type] ?? type}: ${subject}`,
+          from_name:  name,
+          email,
+          message: [
+            `Tip: ${typeLabel[type] ?? type}`,
+            `Subiect: ${subject}`,
+            "",
+            description,
+            "",
+            `Nume: ${name}`,
+            `Email: ${email}`,
+            `Telefon: ${phone}`,
+          ].join("\n"),
+        }),
       });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error ?? "Eroare la trimitere");
-      }
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message ?? "Eroare la trimitere");
       setSent(true);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Eroare necunoscută");
