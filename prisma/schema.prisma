@@ -8,19 +8,24 @@ datasource db {
 }
 
 model User {
-  id            String            @id @default(cuid())
-  email         String            @unique
-  emailVerified DateTime?
-  name          String?
-  image         String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  accounts      Account[]
-  clients       Client[]
-  companies     Company[]
-  templates     InvoiceTemplate[]
-  invoices      Invoice[]
-  sessions      Session[]
+  id                String            @id @default(cuid())
+  email             String            @unique
+  emailVerified     DateTime?
+  name              String?
+  image             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  // Legal compliance
+  termsAcceptedAt   DateTime?
+  termsVersion      String?
+  // Soft delete (GDPR anonymisation)
+  deletedAt         DateTime?
+  accounts          Account[]
+  clients           Client[]
+  companies         Company[]
+  templates         InvoiceTemplate[]
+  invoices          Invoice[]
+  sessions          Session[]
 
   @@map("users")
 }
@@ -148,6 +153,8 @@ model Invoice {
   footerText   String?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
+  // Soft delete — invoices are retained for 10-year legal requirement
+  deletedAt    DateTime?
   items        InvoiceItem[]
   client       Client           @relation(fields: [clientId], references: [id])
   company      Company?         @relation(fields: [companyId], references: [id])

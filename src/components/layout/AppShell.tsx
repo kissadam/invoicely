@@ -3,11 +3,12 @@
 import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 
+const NO_SHELL = ["/login", "/accept-terms", "/privacy-policy", "/terms-and-conditions"];
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLogin = pathname === "/login";
 
-  if (isLogin) {
+  if (NO_SHELL.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return <>{children}</>;
   }
 

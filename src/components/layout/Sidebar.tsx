@@ -18,8 +18,6 @@ import {
 import clsx from "clsx";
 import SupportModal from "./SupportModal";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useRouter } from "next/navigation";
-import type { Locale } from "@/lib/i18n";
 
 const NAV_ITEMS = [
   { href: "/",           icon: LayoutDashboard, key: "dashboard"  },
@@ -34,13 +32,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [supportOpen, setSupportOpen] = useState(false);
-  const { locale, setLocale, t } = useLanguage();
-  const router = useRouter();
-
-  function switchLocale(l: Locale) {
-    setLocale(l);
-    router.refresh();
-  }
+  const { t } = useLanguage();
 
   return (
     <aside className="w-56 shrink-0 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex flex-col h-screen sticky top-0">
@@ -85,32 +77,7 @@ export default function Sidebar() {
           <MessageCircleQuestion size={14} />
           {t.nav.support}
         </button>
-        {/* Language toggle */}
-        <div className="flex gap-1">
-          <button
-            onClick={() => switchLocale("en")}
-            className={clsx(
-              "flex-1 py-1.5 text-xs font-medium rounded-lg border transition-colors",
-              locale === "en"
-                ? "bg-blue-50 border-blue-200 text-blue-700"
-                : "border-slate-200 text-slate-500 hover:bg-slate-50"
-            )}
-          >
-            🇬🇧 EN
-          </button>
-          <button
-            onClick={() => switchLocale("ro")}
-            className={clsx(
-              "flex-1 py-1.5 text-xs font-medium rounded-lg border transition-colors",
-              locale === "ro"
-                ? "bg-blue-50 border-blue-200 text-blue-700"
-                : "border-slate-200 text-slate-500 hover:bg-slate-50"
-            )}
-          >
-            🇷🇴 RO
-          </button>
-        </div>
-        <button
+<button
           onClick={() => signOut({ callbackUrl: "/login" })}
           className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg transition-colors"
         >
