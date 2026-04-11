@@ -6,6 +6,7 @@ import InvoiceEditor from "./InvoiceEditor";
 import type { EditableInvoice } from "./InvoiceEditor";
 import type { SelectedClient } from "./ClientSearch";
 import { parseInvoicePrompt } from "@/lib/parseInvoicePrompt";
+import { matchClient, recordAliases } from "@/lib/clientMatcher";
 
 /** Fades in children after mount — used for the editor entrance animation. */
 function FadeIn({ children }: { children: React.ReactNode }) {
@@ -68,50 +69,25 @@ export default function NewInvoiceFlow() {
       const due   = new Date(Date.now() + 30 * 86_400_000).toISOString().split("T")[0];
 
       // ── Client matching ──────────────────────────────────────────────────────
-      // Strategy: scan the raw input directly against every saved client name.
-      // This is far more reliable than trusting the regex parser to extract a
-      // name, because Romanian constructs like "in valoare de" confuse it.
-      //
-      // We strip common legal suffixes (SRL, SA …) so "Ideal Concept" matches
-      // a saved client called "Ideal Concept SRL". Sort longest-first so we
-      // always prefer the most-specific match.
-      const inputLower = input.toLowerCase();
-
-      function stripSuffix(name: string) {
-        return name.replace(/\b(srl|sa|scs|snc|ra|sas|llc|ltd|inc|gmbh|bv|ag|oy|ab)\b\.?/gi, "").trim();
-      }
-
-      const byLength = [...savedClients].sort((a, b) => b.name.length - a.name.length);
-
-      // Split input into words ≥4 chars for reverse-lookup
-      const inputWords = inputLower.split(/[\s,.:;!?()]+/).filter(w => w.length >= 4);
-
-      const directMatch = byLength.find((c) => {
-        const full  = c.name.toLowerCase();
-        const short = stripSuffix(c.name).toLowerCase();
-        return (
-          // input contains the full client name  → "ideal concept srl" in input
-          inputLower.includes(full) ||
-          // input contains the stripped name     → "ideal concept" in input
-          (short.length > 3 && inputLower.includes(short)) ||
-          // a word from input is a substring of the client name
-          // → "akvisual" matches client "akvisuals"
-          // → "concept" matches client "Ideal Concept SRL"
-          inputWords.some(w => full.includes(w) || (short.length > 3 && short.includes(w)))
-        );
-      });
+      // Uses a three-pass strategy: alias cache → substring → fuzzy (Levenshtein)
+      // Aliases are persisted in localStorage and grow with every match, so the
+      // matcher improves automatically over time.
+      const result = matchClient(input, savedClients);
 
       let matchedClient: SelectedClient | undefined;
       let clientQuery: string | undefined;
 
-      if (directMatch) {
+      if (result) {
+        const c = result.client;
         matchedClient = {
-          id:       directMatch.id,
-          cui:      directMatch.cui      ?? "",
-          name:     directMatch.name,
-          address:  directMatch.address  ?? "",
-          vatPayer: directMatch.vatPayer,
+          id:       c.id,
+          cui:      c.cui      ?? "",
+          name:     c.name,
+          address:  c.address  ?? "",
+          vatPayer: c.vatPayer,
         };
+        // Teach the matcher: remember which words led to this client
+        recordAliases(result.matchedWords, c.id);
       } else {
         // No saved client found — use whatever the regex extracted as a hint
         const parsedName = parsed.clientName && parsed.clientName !== "Client"
