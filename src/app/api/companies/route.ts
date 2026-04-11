@@ -37,27 +37,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "vatRate invalid" }, { status: 400 });
   }
 
-  // Check if this is an existing company (upsert by userId+cui)
-  const existing = await prisma.company.findFirst({ where: { userId, cui: body.cui } });
+  // ── Company limit check ─────────────────────────────────────────────────
+  const userWithSub = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { subscription: { select: { plan: true } } },
+  });
+  const plan = userWithSub?.subscription?.plan ?? "free";
+  const limits = getPlanLimits(plan);
 
-  // ── Company limit check (only for new companies) ────────────────────────
-  if (!existing) {
-    const userWithSub = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { subscription: { select: { plan: true } } },
-    });
-    const plan = userWithSub?.subscription?.plan ?? "free";
-    const limits = getPlanLimits(plan);
-
-    if (limits.companies !== Infinity) {
-      const companyCount = await prisma.company.count({ where: { userId } });
-      if (companyCount >= limits.companies) {
-        return NextResponse.json(
-          { error: `Planul Free permite o singură companie. Fă upgrade la Pro pentru companii multiple.` },
-          { status: 403 }
-        );
-      }
+  if (limits.companies !== Infinity) {
+    const companyCount = await prisma.company.count({ where: { userId } });
+    if (companyCount >= limits.companies) {
+      return NextResponse.json(
+        { error: `Planul Free permite o singură companie. Fă upgrade la Pro pentru companii multiple.` },
+        { status: 403 }
+      );
     }
+  }
+
+  // ── Duplicate CUI check ──────────────────────────────────────────────────
+  const duplicate = await prisma.company.findFirst({ where: { userId, cui: body.cui } });
+  if (duplicate) {
+    return NextResponse.json(
+      { error: `Există deja o companie cu CUI-ul ${body.cui}.` },
+      { status: 400 }
+    );
   }
 
   const data = {
@@ -74,17 +78,15 @@ export async function POST(req: NextRequest) {
   };
 
   try {
-    const company = existing
-      ? await prisma.company.update({ where: { id: existing.id }, data })
-      : await prisma.company.create({ data });
+    const company = await prisma.company.create({ data });
 
-    // Auto-set activeCompanyId if user has none yet (first company / onboarding)
-    await prisma.user.updateMany({
-      where: { id: userId, activeCompanyId: null },
+    // Switch active company to the newly created one
+    await prisma.user.update({
+      where: { id: userId },
       data:  { activeCompanyId: company.id },
     });
 
-    // Also create a free subscription if one doesn't exist
+    // Create a free subscription if one doesn't exist
     await prisma.subscription.upsert({
       where:  { userId },
       update: {},
